@@ -160,10 +160,10 @@ function ClimaTab() {
                 <div>💨 {d.windspeedMax.toFixed(0)} km/h</div>
                 <div>☀ UV {d.uvIndexMax.toFixed(0)}</div>
               </div>
-            </div>
-          </CardBody>
-        </Card>
-      ))}
+            </CardBody>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 }
