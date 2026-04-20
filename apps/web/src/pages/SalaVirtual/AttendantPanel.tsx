@@ -8,7 +8,6 @@ import {
   ACTIVITY_LABEL,
 } from '@/lib/presence/presence.types';
 import { Avatar } from '@/components/ui/Avatar';
-import { Badge } from '@/components/ui/Badge';
 import {
   MessageCircle,
   Phone,

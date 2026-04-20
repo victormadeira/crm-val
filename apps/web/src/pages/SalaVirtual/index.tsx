@@ -1,23 +1,17 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { usePresenceStore } from '@/lib/presence/presenceStore';
-import { PresenceStatus } from '@/lib/presence/presence.types';
-import { IsometricRoom } from './IsometricRoom';
-import { AttendantPanel } from './AttendantPanel';
-import { RoomStatusBar } from './RoomStatusBar';
+import { useState, useMemo, useEffect } from "react";
+import { usePresenceStore } from "@/lib/presence/presenceStore";
+import { PresenceStatus, UserPresence } from "@/lib/presence/presence.types";
+import { IsometricRoom } from "./IsometricRoom";
+import { AttendantPanel } from "./AttendantPanel";
+import { RoomStatusBar } from "./RoomStatusBar";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SalaVirtual
-//
-// Página principal da sala virtual. Compõe:
-//   1. RoomStatusBar — barra de status e filtros
-//   2. IsometricRoom — sala isométrica SVG com avatares
-//   3. AttendantPanel — painel lateral de detalhes
-//
-// Funciona em modo mock (sem WebSocket) por padrão.
-// Para ativar o WebSocket real, configure VITE_WS_URL no .env.
-// ─────────────────────────────────────────────────────────────────────────────
-
+/**
+ * SalaVirtual — visão isométrica da central de atendimento.
+ *
+ * Modos:
+ *   - Mock (default): dados em memória + simulação narrativa
+ *   - Live: conectado via WebSocket (quando VITE_WS_URL está setada)
+ */
 export function SalaVirtual() {
   const {
     users: usersMap,
@@ -28,57 +22,103 @@ export function SalaVirtual() {
     getUserList,
   } = usePresenceStore();
 
-  const [filterStatus, setFilterStatus] = useState<PresenceStatus | 'all'>('all');
+  const [filterStatus, setFilterStatus] = useState<PresenceStatus | "all">("all");
 
   const allUsers = getUserList();
 
-  // Aplica filtro de status
-  const filteredUsers = useMemo(() => {
-    if (filterStatus === 'all') return allUsers;
-    return allUsers.filter((u) => u.status === filterStatus);
+  // Filtro por dimming (não remove) — mantém o layout da sala estável
+  const filteredUserIds = useMemo(() => {
+    if (filterStatus === "all") return undefined;
+    return new Set(
+      allUsers.filter((u) => u.status === filterStatus).map((u) => u.userId),
+    );
   }, [allUsers, filterStatus]);
 
-  const selectedUser = selectedUserId ? usersMap[selectedUserId] ?? null : null;
+  const selectedUser: UserPresence | null = selectedUserId
+    ? (usersMap[selectedUserId] ?? null)
+    : null;
 
-  // Simula animação de atualização de status (apenas em modo mock)
+  // Simulação narrativa em modo mock: roteiro de eventos a cada 6s
   useEffect(() => {
-    if (connected) return; // não simula se conectado ao WS real
+    if (connected) return;
 
-    const statuses: PresenceStatus[] = ['busy_chat', 'online_idle', 'busy_chat', 'away_break'];
-    let idx = 0;
-
-    const interval = setInterval(() => {
-      // Alterna o status do segundo corretor para demonstrar animação
-      const store = usePresenceStore.getState();
-      const c2 = store.users['c2'];
-      if (c2) {
-        const nextStatus = statuses[idx % statuses.length];
+    const script: Array<(store: ReturnType<typeof usePresenceStore.getState>) => void> = [
+      (store) => {
+        const u = store.users["c3"];
+        if (!u) return;
         store._update({
           user: {
-            ...c2,
-            status: nextStatus,
+            ...u,
+            status: "busy_chat",
             statusUpdatedAt: new Date().toISOString(),
-            currentActivity:
-              nextStatus === 'busy_chat'
-                ? {
-                    type: 'whatsapp',
-                    targetId: 'l2',
-                    targetName: 'Fernanda Costa',
-                    startedAt: new Date().toISOString(),
-                  }
-                : undefined,
+            currentActivity: {
+              type: "whatsapp",
+              targetId: "l-live-1",
+              targetName: "Maria Eduarda",
+              startedAt: new Date().toISOString(),
+            },
+            metrics: u.metrics
+              ? { ...u.metrics, filaAtual: Math.max(0, u.metrics.filaAtual - 1) }
+              : undefined,
           },
         });
-      }
+      },
+      (store) => {
+        const u = store.users["c4"];
+        if (!u) return;
+        store._update({
+          user: {
+            ...u,
+            status: "online_idle",
+            statusUpdatedAt: new Date().toISOString(),
+            currentActivity: undefined,
+          },
+        });
+      },
+      (store) => {
+        const u = store.users["bot1"];
+        if (!u?.metrics) return;
+        store._update({
+          user: {
+            ...u,
+            metrics: {
+              ...u.metrics,
+              atendimentosHoje: u.metrics.atendimentosHoje + 1,
+              filaAtual: Math.max(0, u.metrics.filaAtual - 1),
+            },
+          },
+        });
+      },
+      (store) => {
+        const u = store.users["sac2"];
+        if (!u) return;
+        store._update({
+          user: {
+            ...u,
+            status: "busy_chat",
+            statusUpdatedAt: new Date().toISOString(),
+            currentActivity: {
+              type: "ticket",
+              targetId: "t-live-2",
+              targetName: "Reclamação #482",
+              startedAt: new Date().toISOString(),
+            },
+          },
+        });
+      },
+    ];
+
+    let idx = 0;
+    const interval = setInterval(() => {
+      script[idx % script.length](usePresenceStore.getState());
       idx++;
-    }, 5000);
+    }, 6000);
 
     return () => clearInterval(interval);
   }, [connected]);
 
   return (
     <div className="flex flex-col h-full bg-slate-50">
-      {/* Barra de status e filtros */}
       <RoomStatusBar
         users={allUsers}
         roomName={roomConfig.roomName}
@@ -87,52 +127,41 @@ export function SalaVirtual() {
         onFilterChange={setFilterStatus}
       />
 
-      {/* Corpo principal */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Sala isométrica */}
-        <motion.div
-          className="flex-1 overflow-hidden relative"
-          layout
-          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-        >
-          {/* Gradiente de fundo */}
+        <div className="flex-1 overflow-hidden relative">
           <div
             className="absolute inset-0"
             style={{
-              background: 'radial-gradient(ellipse at 50% 30%, #e0f2fe 0%, #f8fafc 60%, #f1f5f9 100%)',
+              background:
+                "radial-gradient(ellipse 80% 60% at 50% 25%, #F0F9FF 0%, #E0F2FE 35%, #F8FAFC 75%, #F1F5F9 100%)",
             }}
           />
 
-          {/* SVG da sala */}
           <div className="relative w-full h-full">
             <IsometricRoom
-              users={filteredUsers}
+              users={allUsers}
               roomConfig={roomConfig}
               selectedUserId={selectedUserId}
               onSelectUser={selectUser}
+              filteredUserIds={filteredUserIds}
             />
           </div>
 
-          {/* Dica de interação */}
           {!selectedUserId && (
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white/80 backdrop-blur-sm text-xs text-slate-500 px-3 py-1.5 rounded-full border border-slate-200 shadow-sm pointer-events-none">
-              Clique em um avatar para ver os detalhes do atendente
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-sm text-xs text-slate-600 px-3 py-1.5 rounded-[10px] border border-slate-200 shadow-soft pointer-events-none">
+              Clique em um atendente para ver os detalhes
             </div>
           )}
 
-          {/* Badge de modo mock */}
           {!connected && (
-            <div className="absolute top-3 right-3 bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-medium px-2 py-1 rounded-full">
-              Modo demonstração — dados simulados
+            <div className="absolute top-3 right-3 bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-semibold px-2.5 py-1 rounded-full flex items-center gap-1.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+              MODO DEMONSTRAÇÃO
             </div>
           )}
-        </motion.div>
+        </div>
 
-        {/* Painel de detalhes */}
-        <AttendantPanel
-          user={selectedUser}
-          onClose={() => selectUser(null)}
-        />
+        <AttendantPanel user={selectedUser} onClose={() => selectUser(null)} />
       </div>
     </div>
   );
