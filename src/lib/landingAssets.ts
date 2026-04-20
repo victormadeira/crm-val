@@ -450,6 +450,201 @@ export function ensureLandingFontsLoaded(fontIds: string[]) {
   fontIds.forEach(ensureFontLoaded);
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   BIBLIOTECA DA MARCA VALPARAÍSO ADVENTURE PARK
+   ─────────────────────────────────────────────────────────────────
+   Ativos oficiais do parque (logos, mascotes, guarás, divisores,
+   backgrounds, fotos curadas). Arquivos em public/brand/valparaiso/lib/
+   extraídos do site oficial via scripts/crawl-valparaiso-assets.mjs.
+   ═══════════════════════════════════════════════════════════════════ */
+
+export type BrandAssetCategoria =
+  | "logo"
+  | "mascote"
+  | "guaras"
+  | "divisor"
+  | "fundo"
+  | "banner"
+  | "foto";
+
+export interface BrandAsset {
+  id: string;
+  label: string;
+  src: string;
+  categoria: BrandAssetCategoria;
+  /** aspect ratio sugerido (w/h) */
+  ratio: number;
+  /** cor dominante (para preview quando offline) */
+  tint?: string;
+  /** tags para busca */
+  tags?: string[];
+}
+
+const B = "/brand/valparaiso/lib";
+
+export const BRAND_ASSETS: BrandAsset[] = [
+  // LOGO
+  {
+    id: "logo_valparas",
+    label: "Logo Valparaíso (vetor)",
+    src: `${B}/logo-valparas.svg`,
+    categoria: "logo",
+    ratio: 180 / 99,
+    tint: "#ff0030",
+    tags: ["marca", "identidade"],
+  },
+  {
+    id: "logo_png",
+    label: "Logo Valparaíso (PNG)",
+    src: `${B}/logo.png`,
+    categoria: "logo",
+    ratio: 2.4,
+    tint: "#ffffff",
+  },
+  // MASCOTES / GUARÁS
+  {
+    id: "guaras_voo",
+    label: "Guarás em voo (bando)",
+    src: `${B}/guaras-voo.svg`,
+    categoria: "guaras",
+    ratio: 1035 / 285,
+    tint: "#ff0030",
+    tags: ["guará", "ave", "MA", "símbolo"],
+  },
+  {
+    id: "mascote_horarios",
+    label: "Mascote · horários",
+    src: `${B}/mascote-horarios.jpg`,
+    categoria: "mascote",
+    ratio: 1,
+  },
+  // DIVISORES / ORNAMENTOS
+  {
+    id: "divisor_onda_branca",
+    label: "Divisor · onda branca",
+    src: `${B}/divisor-onda-branca.svg`,
+    categoria: "divisor",
+    ratio: 1080 / 9,
+    tint: "#ffffff",
+  },
+  {
+    id: "divisor_alerta_amarelo",
+    label: "Divisor · alerta amarelo",
+    src: `${B}/divisor-alerta-amarelo.svg`,
+    categoria: "divisor",
+    ratio: 338 / 13,
+    tint: "#ffcc01",
+  },
+  {
+    id: "divisor_onda_vertical",
+    label: "Divisor · onda vertical",
+    src: `${B}/divisor-onda-vertical.svg`,
+    categoria: "divisor",
+    ratio: 8 / 1080,
+    tint: "#006938",
+  },
+  // FUNDOS
+  {
+    id: "bg_mapa_saoluis",
+    label: "Fundo · mapa São Luís",
+    src: `${B}/bg-mapa-saoluis.jpg`,
+    categoria: "fundo",
+    ratio: 16 / 9,
+    tint: "#36ccc7",
+    tags: ["mapa", "São Luís", "localização"],
+  },
+  {
+    id: "bg_ingressos",
+    label: "Fundo · ingressos/calendário",
+    src: `${B}/bg-ingressos.jpg`,
+    categoria: "fundo",
+    ratio: 16 / 9,
+    tint: "#003399",
+    tags: ["blobs", "azul"],
+  },
+  {
+    id: "bg_restaurante",
+    label: "Fundo · restaurante",
+    src: `${B}/bg-restaurante.png`,
+    categoria: "fundo",
+    ratio: 16 / 9,
+    tint: "#006938",
+  },
+  // BANNERS DAS SEÇÕES
+  {
+    id: "banner_atracoes",
+    label: "Banner · Atrações",
+    src: `${B}/banner-atracoes.jpg`,
+    categoria: "banner",
+    ratio: 3,
+  },
+  {
+    id: "banner_passaportes",
+    label: "Banner · Passaportes",
+    src: `${B}/banner-passaportes.jpg`,
+    categoria: "banner",
+    ratio: 3,
+  },
+  {
+    id: "banner_promocoes",
+    label: "Banner · Promoções",
+    src: `${B}/banner-promocoes.jpg`,
+    categoria: "banner",
+    ratio: 3,
+  },
+  {
+    id: "banner_eventos",
+    label: "Banner · Eventos",
+    src: `${B}/banner-eventos.jpg`,
+    categoria: "banner",
+    ratio: 3,
+  },
+  {
+    id: "banner_restaurante",
+    label: "Banner · Restaurante",
+    src: `${B}/banner-restaurante.jpg`,
+    categoria: "banner",
+    ratio: 3,
+  },
+  {
+    id: "banner_sobre",
+    label: "Banner · Sobre",
+    src: `${B}/banner-sobre.jpg`,
+    categoria: "banner",
+    ratio: 3,
+  },
+  // FOTOS DE ATRAÇÕES
+  ...Array.from({ length: 12 }, (_, i) => {
+    const n = String(i + 1).padStart(2, "0");
+    return {
+      id: `foto_${n}`,
+      label: `Foto atração #${n}`,
+      src: `${B}/foto-${n}.webp`,
+      categoria: "foto" as const,
+      ratio: 3 / 2,
+    };
+  }),
+];
+
+export function getBrandAssetsByCategoria(
+  cat: BrandAssetCategoria
+): BrandAsset[] {
+  return BRAND_ASSETS.filter((a) => a.categoria === cat);
+}
+
+export const BRAND_ASSET_CATEGORIAS: {
+  cat: BrandAssetCategoria;
+  label: string;
+}[] = [
+  { cat: "logo", label: "Logos" },
+  { cat: "guaras", label: "Guarás" },
+  { cat: "mascote", label: "Mascotes" },
+  { cat: "divisor", label: "Divisores" },
+  { cat: "fundo", label: "Fundos" },
+  { cat: "banner", label: "Banners" },
+  { cat: "foto", label: "Fotos" },
+];
+
 export function resolveAcaoHref(acao?: BtnAcao): string | undefined {
   if (!acao || !acao.valor) return undefined;
   switch (acao.tipo) {

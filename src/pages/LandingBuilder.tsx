@@ -71,6 +71,8 @@ import {
 } from "@/lib/clarity";
 import {
   BG_ANIMATIONS,
+  BRAND_ASSETS,
+  BRAND_ASSET_CATEGORIAS,
   BTN_ICON_LABEL,
   FONT_FAMILIES,
   ensureLandingFontsLoaded,
@@ -78,6 +80,8 @@ import {
   getFontStack,
   resolveAcaoHref,
   type BgAnimationId,
+  type BrandAsset,
+  type BrandAssetCategoria,
   type BtnIconKey,
 } from "@/lib/landingAssets";
 import {
@@ -106,73 +110,59 @@ const DEFAULT_CANVAS_H = 2400;
 type TemplateId = LandingPage["template"];
 
 const templateLabel: Record<TemplateId, string> = {
-  anual_familia: "Família Verão",
-  radical: "Radical Jovem",
-  vip: "Aventura Radical (legado)",
-  corporativo: "Corporativo Premium",
-  vip_black: "VIP Black · Camarote",
-  festa_kids: "Festa Kids · Aniversário",
-  black_friday: "Black Friday Relâmpago",
-  minimal: "Institucional Minimal",
-  diaria: "Day-Use Promocional",
-  valparaiso_park: "Valparaíso Park · Oficial",
+  valparaiso_park: "Valparaíso Park · Home oficial",
+  passaporte_anual: "Passaporte Anual · Família",
+  passaporte_diario: "Day-Use · Ingresso do dia",
+  evento_corporativo: "Faça Seu Evento · Corporativo",
+  festa_aniversario: "Festa no Parque · Aniversário",
+  aventura_radical: "Aventura Radical · Tirolesa & Arvorismo",
+  promocoes: "Promoções · Campanha sazonal",
   blank: "Em branco",
 };
 
 const templateDesc: Record<TemplateId, string> = {
-  anual_familia: "Azul turquesa + amarelo sol — passaporte família com ondas animadas.",
-  radical: "Preto + laranja neon — adrenalina pura para jovens.",
-  vip: "Violeta + coral. (mantido por compatibilidade)",
-  corporativo: "Marinho + dourado — eventos empresariais sóbrios.",
-  vip_black: "Preto + champagne — experiência premium exclusiva.",
-  festa_kids: "Rosa + azul céu — aniversário infantil molhado.",
-  black_friday: "Preto + neon — promoção relâmpago com countdown.",
-  minimal: "Azul profundo + turquesa — institucional clean moderno.",
-  diaria: "Vermelho + amarelo — urgência, ingresso day-use.",
-  valparaiso_park: "Verde marca + vermelho #ff0030 — clone 1:1 do site oficial.",
+  valparaiso_park: "Home completa do parque — verde da marca, guarás em voo, tipografia oficial.",
+  passaporte_anual: "Venda do passaporte anual família — um ano inteiro de memórias no Valparaíso.",
+  passaporte_diario: "Ingresso day-use com escassez de data — ideal pra tráfego pago.",
+  evento_corporativo: "Captação B2B para confraternizações, onboarding e eventos empresariais.",
+  festa_aniversario: "Aniversário no parque — pacote kids com decoração e monitoria.",
+  aventura_radical: "Tirolesa, arvorismo e trilhas — público jovem/adulto adrenalina.",
+  promocoes: "Oferta relâmpago com contador — virada de temporada, black friday, campanhas.",
   blank: "Em branco. Crie do zero.",
 };
 
+/* Gradientes sempre dentro da paleta da marca: verde #006938, navy #00297a, vermelho #ff0030, amarelo #ffcc01 */
 const templateGradient: Record<TemplateId, string> = {
-  anual_familia: "linear-gradient(135deg,#22d3ee,#0ea5e9,#2563eb)",
-  radical: "linear-gradient(135deg,#0a0a0a,#1e1b4b,#ff6b00)",
-  vip: "linear-gradient(135deg,#c026d3,#f43f5e,#fb923c)",
-  corporativo: "linear-gradient(135deg,#0f172a,#1e1b4b,#115e59)",
-  vip_black: "linear-gradient(135deg,#000000,#1c1917,#44403c)",
-  festa_kids: "linear-gradient(135deg,#f472b6,#60a5fa,#fde047)",
-  black_friday: "linear-gradient(135deg,#000000,#111827,#eab308)",
-  minimal: "linear-gradient(135deg,#1e40af,#14b8a6,#f0fdf4)",
-  diaria: "linear-gradient(135deg,#dc2626,#f59e0b)",
   valparaiso_park: "linear-gradient(135deg,#006938,#00297a,#ff0030)",
+  passaporte_anual: "linear-gradient(135deg,#006938,#94c93b,#ffcc01)",
+  passaporte_diario: "linear-gradient(135deg,#ff0030,#ff5e26,#ffcc01)",
+  evento_corporativo: "linear-gradient(135deg,#00297a,#003399,#006938)",
+  festa_aniversario: "linear-gradient(135deg,#ff0030,#ffcc01,#36ccc7)",
+  aventura_radical: "linear-gradient(135deg,#006938,#00297a,#000000)",
+  promocoes: "linear-gradient(135deg,#000000,#ff0030,#ffcc01)",
   blank: "linear-gradient(135deg,#f1f5f9,#e2e8f0)",
 };
 
 const templateAccent: Record<TemplateId, { primary: string; text: string }> = {
-  anual_familia: { primary: "#fbbf24", text: "#0f172a" },
-  radical: { primary: "#ff6b00", text: "#ffffff" },
-  vip: { primary: "#f43f5e", text: "#ffffff" },
-  corporativo: { primary: "#c9a961", text: "#0f172a" },
-  vip_black: { primary: "#d4af37", text: "#000000" },
-  festa_kids: { primary: "#ec4899", text: "#ffffff" },
-  black_friday: { primary: "#eab308", text: "#000000" },
-  minimal: { primary: "#14b8a6", text: "#ffffff" },
-  diaria: { primary: "#facc15", text: "#0f172a" },
   valparaiso_park: { primary: "#ff0030", text: "#ffffff" },
+  passaporte_anual: { primary: "#ff0030", text: "#ffffff" },
+  passaporte_diario: { primary: "#ffcc01", text: "#000000" },
+  evento_corporativo: { primary: "#ffcc01", text: "#ffffff" },
+  festa_aniversario: { primary: "#ff0030", text: "#ffffff" },
+  aventura_radical: { primary: "#ffcc01", text: "#000000" },
+  promocoes: { primary: "#ffcc01", text: "#000000" },
   blank: { primary: "#0B6BCB", text: "#ffffff" },
 };
 
-/* Font pairing por template: [heading, body] */
+/* Todos os templates da marca usam valparas (display) + blogger_sans (body). */
 const templateFonts: Record<TemplateId, { heading: string; body: string }> = {
-  anual_familia: { heading: "poppins", body: "inter" },
-  radical: { heading: "bebas", body: "space_grotesk" },
-  vip: { heading: "poppins", body: "inter" },
-  corporativo: { heading: "playfair", body: "lora" },
-  vip_black: { heading: "cormorant", body: "outfit" },
-  festa_kids: { heading: "fredoka", body: "nunito" },
-  black_friday: { heading: "anton", body: "inter" },
-  minimal: { heading: "montserrat", body: "raleway" },
-  diaria: { heading: "oswald", body: "dm_sans" },
   valparaiso_park: { heading: "valparas", body: "blogger_sans" },
+  passaporte_anual: { heading: "valparas", body: "blogger_sans" },
+  passaporte_diario: { heading: "valparas", body: "blogger_sans" },
+  evento_corporativo: { heading: "valparas", body: "blogger_sans" },
+  festa_aniversario: { heading: "valparas", body: "blogger_sans" },
+  aventura_radical: { heading: "valparas", body: "blogger_sans" },
+  promocoes: { heading: "valparas", body: "blogger_sans" },
   blank: { heading: "inter", body: "inter" },
 };
 
@@ -296,290 +286,197 @@ interface TemplateRecipe {
 }
 
 const TEMPLATE_RECIPES: Record<TemplateId, TemplateRecipe> = {
-  anual_familia: {
-    heroScene: "ocean_waves",
-    ctaFinalScene: "aurora_aqua",
-    btnGrad: { de: "#fbbf24", para: "#f97316" },
-    heroOverlay: "linear-gradient(180deg,rgba(15,23,42,0.15) 0%,rgba(15,23,42,0.45) 100%)",
-    badge: "TEMPORADA 2026 · VALPARAÍSO",
-    heroTitle: "Um ano inteiro de memórias em família",
+  passaporte_anual: {
+    heroScene: "family_sunshine",
+    ctaFinalScene: "ocean_waves",
+    btnGrad: { de: "#ff0030", para: "#ff5e26" },
+    heroOverlay: "linear-gradient(180deg,rgba(0,105,56,0.45) 0%,rgba(0,41,122,0.75) 100%)",
+    badge: "PASSAPORTE ANUAL · TEMPORADA 2026",
+    heroTitle: "Um ano inteiro de Valparaíso na sua família",
     heroSubtitle:
-      "Passaporte Anual com acesso ilimitado, filas preferenciais e descontos exclusivos — o verão não acaba mais.",
-    ctaPrimary: { label: "Garantir passaporte", icon: "arrow_right", hoverFx: "lift" },
-    ctaSecondary: { label: "Falar no WhatsApp", icon: "whatsapp" },
-    benefitsTitle: "Por que 40 mil famílias escolhem o Valparaíso",
-    benefits: [
-      { titulo: "Acesso ilimitado", desc: "Passaporte válido por 12 meses — quantas visitas quiser.", icone: "check" },
-      { titulo: "30+ atrações", desc: "Piscina de ondas, toboáguas radicais e área kids premiada.", icone: "star" },
-      { titulo: "Estacionamento grátis", desc: "Gratuito para todos os passaportistas o ano inteiro.", icone: "heart" },
-    ],
-    galleryTitle: "Um tour pelo maior parque aquático do MA",
-    pricingTitle: "Escolha seu plano",
-    plans: [
-      { n: "Individual", p: "R$ 299", s: "12x R$ 29,90" },
-      { n: "Família", p: "R$ 899", s: "12x R$ 89,90" },
-      { n: "VIP Família", p: "R$ 1.499", s: "12x R$ 149,90" },
-    ],
-    ctaFinalTitle: "Últimas 48h com 30% OFF",
-    ctaFinalSubtitle: "Passaporte anual família com preço promocional — só até domingo.",
-    ctaFinalLabel: "Quero falar com consultor",
-    ctaFinalIcon: "whatsapp",
-    canvasBg: "#f0fdff",
-    heroLight: true,
-  },
-  radical: {
-    heroScene: "deep_bubbles",
-    ctaFinalScene: "vip_gold",
-    btnGrad: { de: "#ff6b00", para: "#dc2626" },
-    heroOverlay: "linear-gradient(180deg,rgba(10,10,10,0.45) 0%,rgba(10,10,10,0.75) 100%)",
-    badge: "APENAS PARA OS CORAJOSOS",
-    heroTitle: "VOCÊ NÃO VEM PRA NADAR. VEM PRA ENCARAR.",
-    heroSubtitle:
-      "7 atrações radicais, 3 toboáguas de queda livre e a adrenalina que você não encontra em lugar nenhum.",
-    ctaPrimary: { label: "Quero o desafio", icon: "arrow_right", hoverFx: "glow" },
-    ctaSecondary: { label: "Ver todas atrações", icon: "play" },
-    benefitsTitle: "Radical não é pra todo mundo",
-    benefits: [
-      { titulo: "Queda livre 25m", desc: "Toboágua mais alto do Nordeste — só pros corajosos.", icone: "star" },
-      { titulo: "Wave pool XXL", desc: "Ondas de surf real dentro do parque.", icone: "heart" },
-      { titulo: "Circuit radical", desc: "7 atrações encadeadas em 90 minutos.", icone: "check" },
-    ],
-    galleryTitle: "As atrações que vão te colocar no limite",
-    pricingTitle: "Ingressos radicais",
-    plans: [
-      { n: "Day Pass", p: "R$ 129", s: "Um dia inteiro de adrenalina" },
-      { n: "Radical Pack", p: "R$ 199", s: "Acesso VIP + camisa + foto" },
-      { n: "Radical Anual", p: "R$ 799", s: "12x R$ 79,90 — acesso ilimitado" },
-    ],
-    ctaFinalTitle: "Encara ou não encara?",
-    ctaFinalSubtitle: "Reserva o lugar nos toboáguas radicais agora. Vagas limitadas por turno.",
-    ctaFinalLabel: "Garantir vaga",
-    ctaFinalIcon: "arrow_right",
-    canvasBg: "#0a0a0a",
-    heroLight: true,
-    headlineUpper: true,
-    headlineLetter: -1,
-  },
-  vip: {
-    heroScene: "vip_gold",
-    ctaFinalScene: "aurora_aqua",
-    btnGrad: { de: "#f43f5e", para: "#c026d3" },
-    heroOverlay: "linear-gradient(180deg,rgba(15,23,42,0.35) 0%,rgba(15,23,42,0.6) 100%)",
-    badge: "TEMPORADA 2026 · VALPARAÍSO",
-    heroTitle: "Pura adrenalina. 30+ atrações radicais.",
-    heroSubtitle: "O maior parque aquático do MA. Toboáguas radicais, piscina de ondas e a melhor galera.",
+      "Acesso ilimitado ao parque aquático, tirolesa, arvorismo e trilhas. 12 meses pra criar memória sem contar quantas vezes vocês vão voltar.",
     ctaPrimary: { label: "Quero meu passaporte", icon: "arrow_right", hoverFx: "lift" },
     ctaSecondary: { label: "Falar no WhatsApp", icon: "whatsapp" },
-    benefitsTitle: "Adrenalina pura",
+    benefitsTitle: "Feito pra quem visita o parque mais de uma vez no ano",
     benefits: [
-      { titulo: "30+ atrações", desc: "Renovadas a cada temporada.", icone: "star" },
-      { titulo: "Piscina de ondas", desc: "A maior da região.", icone: "heart" },
-      { titulo: "Acesso prioritário", desc: "Sem filas nas atrações radicais.", icone: "check" },
+      { titulo: "Acesso ilimitado", desc: "Entre quantas vezes quiser por 12 meses — sem restrição.", icone: "check" },
+      { titulo: "Família completa", desc: "Até 4 dependentes no mesmo passaporte anual família.", icone: "heart" },
+      { titulo: "Descontos no restaurante", desc: "15% OFF no Restaurante do Parque o ano inteiro.", icone: "star" },
     ],
-    galleryTitle: "Conheça o parque",
-    pricingTitle: "Planos e valores",
+    galleryTitle: "O parque que você vai conhecer a cada visita",
+    pricingTitle: "Escolha seu passaporte",
     plans: [
-      { n: "Individual", p: "R$ 299", s: "12x R$ 29,90" },
-      { n: "Família", p: "R$ 899", s: "12x R$ 89,90" },
-      { n: "VIP Black", p: "R$ 1.499", s: "12x R$ 149,90" },
+      { n: "Individual", p: "R$ 349", s: "12x R$ 34,90 · 1 pessoa" },
+      { n: "Família 4", p: "R$ 1.099", s: "12x R$ 109,90 · até 4 pessoas" },
+      { n: "Família 6", p: "R$ 1.499", s: "12x R$ 149,90 · até 6 pessoas" },
     ],
-    ctaFinalTitle: "Garanta seu passaporte agora",
-    ctaFinalSubtitle: "Últimas 48h com 30% OFF no passaporte anual.",
-    ctaFinalLabel: "Falar com consultor",
+    ctaFinalTitle: "Ative agora seu passaporte 2026",
+    ctaFinalSubtitle: "Começa a valer no mesmo dia da ativação. Parcele em 12x no cartão ou à vista no Pix.",
+    ctaFinalLabel: "Quero ativar o passaporte",
     ctaFinalIcon: "whatsapp",
-    canvasBg: "#0f0f14",
+    canvasBg: "#006938",
     heroLight: true,
+    headlineLetter: -0.3,
   },
-  corporativo: {
-    heroScene: "corp_night",
-    ctaFinalScene: "aurora_aqua",
-    btnGrad: { de: "#c9a961", para: "#eab308" },
-    heroOverlay: "linear-gradient(180deg,rgba(15,23,42,0.3) 0%,rgba(15,23,42,0.55) 100%)",
-    badge: "EVENTOS CORPORATIVOS · VALPARAÍSO",
-    heroTitle: "O palco ideal para sua próxima convenção",
+  passaporte_diario: {
+    heroScene: "splash_drops",
+    ctaFinalScene: "confetti_party",
+    btnGrad: { de: "#ffcc01", para: "#ff5e26" },
+    heroOverlay: "linear-gradient(180deg,rgba(0,105,56,0.35) 0%,rgba(0,105,56,0.7) 100%)",
+    badge: "⚡ DAY-USE · INGRESSO DO DIA",
+    heroTitle: "Um dia no Valparaíso, memória pra vida",
     heroSubtitle:
-      "Estrutura completa para até 5.000 colaboradores, com catering premium, produção audiovisual e coordenação dedicada.",
-    ctaPrimary: { label: "Solicitar proposta", icon: "mail", hoverFx: "lift" },
-    ctaSecondary: { label: "Baixar brochura", icon: "download" },
-    benefitsTitle: "Confiado por mais de 180 empresas",
+      "Ingresso day-use com acesso a tudo — parque aquático, tirolesa, arvorismo e trilhas. Comprou online, pulou a fila.",
+    ctaPrimary: { label: "Comprar ingresso", icon: "cart", hoverFx: "pulse" },
+    ctaSecondary: { label: "Ver como chegar", icon: "arrow_right" },
+    benefitsTitle: "Um ingresso, o parque inteiro na sua mão",
     benefits: [
-      { titulo: "Estrutura premium", desc: "Auditório 1.200 lugares + áreas de convivência.", icone: "star" },
-      { titulo: "Produção turnkey", desc: "Som, luz, cenografia e AV entregues chave-na-mão.", icone: "check" },
-      { titulo: "Catering executivo", desc: "Chef próprio e menu customizado para seu evento.", icone: "heart" },
+      { titulo: "Todas atrações liberadas", desc: "Do abre ao fecha, sem restrição e sem taxa extra.", icone: "check" },
+      { titulo: "Pula-fila digital", desc: "QR Code no WhatsApp — entra direto na catraca.", icone: "star" },
+      { titulo: "Estacionamento grátis", desc: "Gratuito para quem compra online antecipado.", icone: "heart" },
     ],
-    galleryTitle: "Eventos que marcaram 2025",
+    galleryTitle: "O que você vai viver hoje",
+    pricingTitle: "Ingressos day-use",
+    plans: [
+      { n: "Infantil (até 10)", p: "R$ 69", s: "Criança · entrada individual" },
+      { n: "Adulto", p: "R$ 129", s: "Inteira · qualquer dia" },
+      { n: "Família 4", p: "R$ 449", s: "4 pessoas · economize R$ 67" },
+    ],
+    ctaFinalTitle: "Reserve sua data antes de esgotar",
+    ctaFinalSubtitle: "Fins de semana e feriados saem rápido. Garanta seu lugar e receba o QR Code no WhatsApp.",
+    ctaFinalLabel: "Quero meu ingresso",
+    ctaFinalIcon: "cart",
+    canvasBg: "#006938",
+    heroLight: true,
+    headlineLetter: -0.5,
+  },
+  evento_corporativo: {
+    heroScene: "corp_night",
+    ctaFinalScene: "palm_breeze",
+    btnGrad: { de: "#ffcc01", para: "#ff0030" },
+    heroOverlay: "linear-gradient(180deg,rgba(0,41,122,0.55) 0%,rgba(0,0,0,0.85) 100%)",
+    badge: "FAÇA SEU EVENTO · VALPARAÍSO CORPORATE",
+    heroTitle: "O cenário que a sua equipe não esquece",
+    heroSubtitle:
+      "Confraternizações, convenções e team buildings em 200 mil m² de natureza preservada. Estrutura completa para até 3.000 colaboradores — com produção turnkey.",
+    ctaPrimary: { label: "Solicitar proposta", icon: "mail", hoverFx: "lift" },
+    ctaSecondary: { label: "Falar no WhatsApp", icon: "whatsapp" },
+    benefitsTitle: "O destino preferido das empresas do Maranhão",
+    benefits: [
+      { titulo: "Estrutura turnkey", desc: "Som, luz, palco, AV, catering e coordenação entregues prontos.", icone: "check" },
+      { titulo: "Team building real", desc: "Trilhas, rapel, arvorismo e dinâmicas com facilitador próprio.", icone: "heart" },
+      { titulo: "Menu executivo", desc: "Brigada própria, cardápio customizado e restaurante privativo.", icone: "star" },
+    ],
+    galleryTitle: "Eventos que aconteceram no parque",
     pricingTitle: "Formatos de evento",
     plans: [
-      { n: "Day Use Team", p: "R$ 89 / pax", s: "Mínimo 50 pessoas" },
-      { n: "Convenção", p: "Sob consulta", s: "Proposta em 2h úteis" },
-      { n: "Festa Corp", p: "R$ 159 / pax", s: "Open bar + DJ incluso" },
+      { n: "Day Use Team", p: "R$ 119 / pax", s: "Mínimo 40 pessoas" },
+      { n: "Convenção", p: "Sob consulta", s: "Proposta em até 2h úteis" },
+      { n: "Festa da Empresa", p: "R$ 189 / pax", s: "Open food + DJ + estrutura" },
     ],
-    ctaFinalTitle: "Receba uma proposta personalizada em 2 horas",
-    ctaFinalSubtitle: "Nosso time de eventos responde em até 2 horas úteis, sempre.",
-    ctaFinalLabel: "Solicitar proposta agora",
+    ctaFinalTitle: "Proposta personalizada em até 2 horas úteis",
+    ctaFinalSubtitle: "Conta pra gente o formato, a data e o volume — nosso time de eventos monta o escopo completo no mesmo dia.",
+    ctaFinalLabel: "Solicitar proposta",
     ctaFinalIcon: "mail",
-    canvasBg: "#f8f5ee",
+    canvasBg: "#00297a",
+    heroLight: true,
+    headlineLetter: -0.3,
+  },
+  festa_aniversario: {
+    heroScene: "confetti_party",
+    ctaFinalScene: "family_sunshine",
+    btnGrad: { de: "#ff0030", para: "#ffcc01" },
+    heroOverlay: "linear-gradient(180deg,rgba(0,105,56,0.35) 0%,rgba(255,0,48,0.55) 100%)",
+    badge: "FESTA NO PARQUE · ANIVERSÁRIO",
+    heroTitle: "O aniversário que seu filho vai lembrar pra sempre",
+    heroSubtitle:
+      "Pacote completo com monitores dedicados, decoração temática, bolo e acesso livre às atrações aquáticas. Pra festas de até 50 convidados.",
+    ctaPrimary: { label: "Montar minha festa", icon: "sparkles", hoverFx: "pulse" },
+    ctaSecondary: { label: "Falar com a equipe", icon: "whatsapp" },
+    benefitsTitle: "Por que o Valparaíso é o melhor lugar pra comemorar",
+    benefits: [
+      { titulo: "Monitoria exclusiva", desc: "Equipe dedicada só pro seu aniversário o dia inteiro.", icone: "heart" },
+      { titulo: "Decoração temática", desc: "Mais de 15 temas prontos ou totalmente personalizados.", icone: "sparkles" },
+      { titulo: "Tudo incluso", desc: "Ingresso, alimentação, bolo, decoração e kit lembrança.", icone: "star" },
+    ],
+    galleryTitle: "Festas que já aconteceram por aqui",
+    pricingTitle: "Pacotes de aniversário",
+    plans: [
+      { n: "Splash 15", p: "R$ 1.890", s: "até 15 convidados · 4h de festa" },
+      { n: "Splash 30", p: "R$ 2.990", s: "até 30 convidados · 5h + bolo" },
+      { n: "Splash Deluxe", p: "R$ 4.990", s: "até 50 · open food + DJ kids" },
+    ],
+    ctaFinalTitle: "Agenda de sábados enchendo rápido",
+    ctaFinalSubtitle: "Temos poucas datas disponíveis nos próximos 3 meses. Reserve agora e ganhe a decoração cortesia.",
+    ctaFinalLabel: "Reservar minha data",
+    ctaFinalIcon: "whatsapp",
+    canvasBg: "#006938",
     heroLight: true,
   },
-  vip_black: {
-    heroScene: "vip_gold",
+  aventura_radical: {
+    heroScene: "deep_bubbles",
     ctaFinalScene: "vip_gold",
-    btnGrad: { de: "#d4af37", para: "#b07b00" },
-    heroOverlay: "linear-gradient(180deg,rgba(0,0,0,0.45) 0%,rgba(0,0,0,0.78) 100%)",
-    badge: "EXCLUSIVO · APENAS 200 TÍTULOS",
-    heroTitle: "A experiência que poucos conhecem",
+    btnGrad: { de: "#ffcc01", para: "#ff0030" },
+    heroOverlay: "linear-gradient(180deg,rgba(0,105,56,0.55) 0%,rgba(0,0,0,0.85) 100%)",
+    badge: "AVENTURA RADICAL · TIROLESA & ARVORISMO",
+    heroTitle: "Do chão aos 25 metros de queda livre",
     heroSubtitle:
-      "Área VIP com open bar premium, cabanas privativas e concierge dedicado. Uma temporada para quem escolhe o melhor.",
-    ctaPrimary: { label: "Reservar lugar VIP", icon: "sparkles", hoverFx: "glow" },
-    ctaSecondary: { label: "Agendar tour privado", icon: "phone" },
-    benefitsTitle: "O que só o Black oferece",
+      "Tirolesa, arvorismo, rapel e escalada. Quatro circuitos radicais no meio da mata nativa, com monitoria certificada e equipamentos importados.",
+    ctaPrimary: { label: "Quero encarar", icon: "arrow_right", hoverFx: "glow" },
+    ctaSecondary: { label: "Ver atrações", icon: "play" },
+    benefitsTitle: "A adrenalina que o Maranhão só tem aqui",
     benefits: [
-      { titulo: "Cabana privativa", desc: "Espaço exclusivo com mordomo o dia inteiro.", icone: "sparkles" },
-      { titulo: "Open bar premium", desc: "Champagnes, coquetéis autorais e gastronomia.", icone: "heart" },
-      { titulo: "Concierge 24/7", desc: "Atendimento dedicado antes, durante e depois.", icone: "star" },
+      { titulo: "Tirolesa 400m", desc: "Maior travessia aérea do estado — sobre a mata nativa.", icone: "star" },
+      { titulo: "Arvorismo em 3 níveis", desc: "Do iniciante ao avançado, com monitores certificados.", icone: "heart" },
+      { titulo: "Segurança UIAA", desc: "Equipamentos de montanhismo e dupla-ancora em tudo.", icone: "check" },
     ],
-    galleryTitle: "O ritual do Black",
-    pricingTitle: "Títulos Black disponíveis",
+    galleryTitle: "Os circuitos radicais do parque",
+    pricingTitle: "Ingressos aventura",
     plans: [
-      { n: "Black Solo", p: "R$ 4.900", s: "Temporada completa" },
-      { n: "Black Casal", p: "R$ 7.900", s: "2 pessoas · cabana premium" },
-      { n: "Black Family", p: "R$ 12.900", s: "Até 5 pessoas · mordomo fixo" },
+      { n: "Circuito Light", p: "R$ 89", s: "Arvorismo iniciante · 1h" },
+      { n: "Aventura Total", p: "R$ 249", s: "Tirolesa + arvorismo + rapel" },
+      { n: "Radical Pass", p: "R$ 349", s: "Aventura + parque aquático · dia inteiro" },
     ],
-    ctaFinalTitle: "Menos de 30 títulos restantes",
-    ctaFinalSubtitle: "A temporada 2026 está quase esgotada. Entre em contato com o concierge agora.",
-    ctaFinalLabel: "Falar com concierge",
-    ctaFinalIcon: "phone",
+    ctaFinalTitle: "Encara ou encara?",
+    ctaFinalSubtitle: "Vagas limitadas por turno para garantir segurança. Reserve sua data e horário antes de esgotar.",
+    ctaFinalLabel: "Reservar minha aventura",
+    ctaFinalIcon: "arrow_right",
     canvasBg: "#0a0a0a",
     heroLight: true,
     headlineLetter: -0.5,
   },
-  festa_kids: {
-    heroScene: "confetti_party",
-    ctaFinalScene: "family_sunshine",
-    btnGrad: { de: "#ec4899", para: "#f472b6" },
-    heroOverlay: "linear-gradient(180deg,rgba(59,7,100,0.1) 0%,rgba(59,7,100,0.35) 100%)",
-    badge: "ANIVERSÁRIO INFANTIL · VALPARAÍSO",
-    heroTitle: "O aniversário mais molhado do ano!",
-    heroSubtitle:
-      "Pacotes completos para até 30 convidados, com monitores exclusivos, decoração temática e bolo personalizado.",
-    ctaPrimary: { label: "Montar minha festa", icon: "sparkles", hoverFx: "pulse" },
-    ctaSecondary: { label: "Ver pacotes", icon: "arrow_right" },
-    benefitsTitle: "Diversão garantida pra criançada",
-    benefits: [
-      { titulo: "Monitores exclusivos", desc: "Equipe dedicada só pro seu evento.", icone: "heart" },
-      { titulo: "Decoração temática", desc: "Escolha entre 15 temas campeões.", icone: "sparkles" },
-      { titulo: "Bolo + doces", desc: "Confeitaria própria com opções sem lactose.", icone: "star" },
-    ],
-    galleryTitle: "As festas que já aconteceram aqui",
-    pricingTitle: "Pacotes de aniversário",
-    plans: [
-      { n: "Splash 15", p: "R$ 1.490", s: "até 15 convidados · 4h" },
-      { n: "Splash 30", p: "R$ 2.490", s: "até 30 convidados · 5h" },
-      { n: "Splash Deluxe", p: "R$ 4.490", s: "até 50 · open food + DJ kids" },
-    ],
-    ctaFinalTitle: "Agenda de sábados quase cheia",
-    ctaFinalSubtitle: "Restam 3 sábados para o mês. Garanta sua data agora e ganhe decoração grátis.",
-    ctaFinalLabel: "Reservar minha data",
-    ctaFinalIcon: "whatsapp",
-    canvasBg: "#fef3f9",
-    heroLight: true,
-  },
-  black_friday: {
-    heroScene: "vip_gold",
+  promocoes: {
+    heroScene: "splash_drops",
     ctaFinalScene: "confetti_party",
-    btnGrad: { de: "#eab308", para: "#ef4444" },
-    heroOverlay: "linear-gradient(180deg,rgba(0,0,0,0.55) 0%,rgba(0,0,0,0.85) 100%)",
-    badge: "🔥 BLACK FRIDAY · TERMINA EM 48H",
-    heroTitle: "ATÉ 70% OFF NO INGRESSO",
+    btnGrad: { de: "#ffcc01", para: "#ff0030" },
+    heroOverlay: "linear-gradient(180deg,rgba(0,0,0,0.55) 0%,rgba(255,0,48,0.75) 100%)",
+    badge: "🔥 PROMOÇÃO RELÂMPAGO · TERMINA EM 48H",
+    heroTitle: "ATÉ 40% OFF NO SEU DIA NO VALPARAÍSO",
     heroSubtitle:
-      "A maior promoção do ano. Ingressos, passaportes e pacotes com desconto absurdo. Countdown ativo — termina domingo 23:59.",
+      "Preços promocionais de temporada, parcelamento em 12x e brindes exclusivos. Campanha válida enquanto duram os ingressos — contador oficial rodando.",
     ctaPrimary: { label: "Comprar com desconto", icon: "cart", hoverFx: "pulse" },
     ctaSecondary: { label: "Ativar lembrete", icon: "mail" },
-    benefitsTitle: "A promoção mais esperada do ano",
+    benefitsTitle: "A promoção mais esperada da temporada",
     benefits: [
-      { titulo: "70% OFF no day-use", desc: "Ingresso individual a R$ 39 só essa semana.", icone: "star" },
-      { titulo: "40% OFF no anual", desc: "Passaporte família por R$ 539 (de R$ 899).", icone: "heart" },
-      { titulo: "Cashback 10%", desc: "Volta em crédito pra usar na lanchonete.", icone: "check" },
+      { titulo: "40% OFF no day-use", desc: "Ingresso individual a R$ 77 (de R$ 129) — só essa semana.", icone: "star" },
+      { titulo: "30% OFF no anual", desc: "Passaporte família por R$ 769 (de R$ 1.099).", icone: "heart" },
+      { titulo: "Brinde exclusivo", desc: "Camisa oficial + kit praia grátis pra primeiros 500.", icone: "check" },
     ],
-    galleryTitle: "Diversão com preço de Black Friday",
+    galleryTitle: "Aproveite todo o parque com desconto",
     pricingTitle: "Ofertas relâmpago",
     plans: [
-      { n: "Day Use Black", p: "R$ 39", s: "De R$ 129 · 70% OFF" },
-      { n: "Família Black", p: "R$ 539", s: "De R$ 899 · 40% OFF" },
-      { n: "VIP Black Black", p: "R$ 899", s: "De R$ 1.499 · 40% OFF" },
+      { n: "Day Use", p: "R$ 77", s: "De R$ 129 · 40% OFF" },
+      { n: "Família 4", p: "R$ 269", s: "De R$ 449 · 40% OFF" },
+      { n: "Anual Família", p: "R$ 769", s: "De R$ 1.099 · 30% OFF" },
     ],
-    ctaFinalTitle: "48 horas. Depois acabou.",
-    ctaFinalSubtitle: "O desconto de Black Friday não volta. Garanta o seu antes do contador zerar.",
-    ctaFinalLabel: "Comprar agora com 70% OFF",
+    ctaFinalTitle: "48 horas. Depois volta ao preço cheio.",
+    ctaFinalSubtitle: "O desconto não se repete essa temporada. Garanta agora antes do contador zerar.",
+    ctaFinalLabel: "Comprar com 40% OFF",
     ctaFinalIcon: "cart",
     canvasBg: "#000000",
     heroLight: true,
     headlineUpper: true,
     headlineLetter: -1,
-  },
-  minimal: {
-    heroScene: "aurora_aqua",
-    ctaFinalScene: null,
-    heroBgOverride: "linear-gradient(135deg,#f8fafc 0%,#e0f2fe 50%,#ccfbf1 100%)",
-    btnGrad: { de: "#14b8a6", para: "#0ea5e9" },
-    heroOverlay: "linear-gradient(180deg,rgba(255,255,255,0) 0%,rgba(255,255,255,0.05) 100%)",
-    badge: "PARQUE AQUÁTICO VALPARAÍSO",
-    heroTitle: "Onde a água vira história",
-    heroSubtitle:
-      "Conheça o maior parque aquático do Nordeste brasileiro. Desde 1998 criando memórias que atravessam gerações.",
-    ctaPrimary: { label: "Explorar o parque", icon: "arrow_right", hoverFx: "lift" },
-    ctaSecondary: { label: "Comprar ingresso", icon: "cart" },
-    benefitsTitle: "Uma experiência cuidadosamente desenhada",
-    benefits: [
-      { titulo: "27 anos de história", desc: "Desde 1998 sendo referência no Nordeste.", icone: "star" },
-      { titulo: "Estrutura premiada", desc: "3 anos seguidos entre os 10 melhores do país.", icone: "heart" },
-      { titulo: "Sustentabilidade real", desc: "100% da água reutilizada, certificação ISO 14001.", icone: "check" },
-    ],
-    galleryTitle: "O parque em imagens",
-    pricingTitle: "Ingressos e planos",
-    plans: [
-      { n: "Day Use", p: "R$ 129", s: "Válido em qualquer dia" },
-      { n: "Anual Individual", p: "R$ 299", s: "12x sem juros" },
-      { n: "Anual Família", p: "R$ 899", s: "12x R$ 89,90" },
-    ],
-    ctaFinalTitle: "Uma visita, várias histórias",
-    ctaFinalSubtitle: "Comece agora a história que sua família vai contar por anos.",
-    ctaFinalLabel: "Comprar ingresso",
-    ctaFinalIcon: "cart",
-    canvasBg: "#ffffff",
-    heroLight: false,
-  },
-  diaria: {
-    heroScene: "splash_drops",
-    ctaFinalScene: "confetti_party",
-    btnGrad: { de: "#dc2626", para: "#f59e0b" },
-    heroOverlay: "linear-gradient(180deg,rgba(15,23,42,0.25) 0%,rgba(15,23,42,0.5) 100%)",
-    badge: "⚡ OFERTA RELÂMPAGO · HOJE",
-    heroTitle: "HOJE. SÓ HOJE. METADE DO PREÇO.",
-    heroSubtitle:
-      "Entrada day-use com 50% OFF — vagas limitadas por turno. A promoção acaba às 23:59.",
-    ctaPrimary: { label: "Comprar agora", icon: "cart", hoverFx: "pulse" },
-    ctaSecondary: { label: "Ver regras", icon: "arrow_right" },
-    benefitsTitle: "Por que o day-use é o melhor negócio",
-    benefits: [
-      { titulo: "Todas liberadas", desc: "30+ atrações do abre ao fecha, sem restrição.", icone: "check" },
-      { titulo: "Estacionamento grátis", desc: "Incluso no ingresso promocional.", icone: "heart" },
-      { titulo: "Parcelamos 6x", desc: "Sem juros no cartão — até domingo.", icone: "star" },
-    ],
-    galleryTitle: "O que você aproveita hoje",
-    pricingTitle: "Ingressos day-use",
-    plans: [
-      { n: "Infantil (até 10)", p: "R$ 49", s: "De R$ 99 · hoje" },
-      { n: "Adulto", p: "R$ 69", s: "De R$ 139 · hoje" },
-      { n: "Família 4", p: "R$ 229", s: "De R$ 459 · hoje" },
-    ],
-    ctaFinalTitle: "Contador ativo: 14h 32min restantes",
-    ctaFinalSubtitle: "Depois volta ao preço normal. Garanta seu ingresso antes de zerar.",
-    ctaFinalLabel: "Comprar com 50% OFF",
-    ctaFinalIcon: "cart",
-    canvasBg: "#fff7ed",
-    heroLight: true,
-    headlineUpper: true,
   },
   valparaiso_park: {
     heroScene: "palm_breeze",
@@ -1232,14 +1129,12 @@ const buildTemplate = (t: TemplateId): { elementos: LPElemento[]; bg: string; h:
 
 const templatesFeatured: TemplateId[] = [
   "valparaiso_park",
-  "anual_familia",
-  "radical",
-  "corporativo",
-  "vip_black",
-  "festa_kids",
-  "black_friday",
-  "minimal",
-  "diaria",
+  "passaporte_anual",
+  "passaporte_diario",
+  "evento_corporativo",
+  "festa_aniversario",
+  "aventura_radical",
+  "promocoes",
 ];
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -1725,6 +1620,7 @@ function CanvasEditor({
   const [history, setHistory] = useState<LandingPage[]>([]);
   const [future, setFuture] = useState<LandingPage[]>([]);
   const [rightTab, setRightTab] = useState<"props" | "layers">("props");
+  const [brandCat, setBrandCat] = useState<BrandAssetCategoria>("logo");
   const [guides, setGuides] = useState<{ v: number[]; h: number[] }>({ v: [], h: [] });
 
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -2089,6 +1985,27 @@ function CanvasEditor({
     inp.click();
   };
 
+  const addBrandAsset = (asset: BrandAsset) => {
+    // largura padrão por categoria; altura derivada pela aspect ratio
+    const targetW =
+      asset.categoria === "logo"
+        ? 260
+        : asset.categoria === "guaras"
+        ? 520
+        : asset.categoria === "divisor"
+        ? 600
+        : asset.categoria === "banner"
+        ? 600
+        : asset.categoria === "mascote"
+        ? 220
+        : 360;
+    const w = targetW;
+    const h = Math.max(60, Math.round(w / asset.ratio));
+    const centerX = Math.max(0, canvasW / 2 - w / 2);
+    const centerY = 80;
+    addEl("imagem", { src: asset.src, w, h, fit: "contain", radius: 0 }, centerX, centerY);
+  };
+
   const paletteClick = (tipo: LPElementoTipo, preset?: Partial<LPElemento>) => {
     const centerX = canvasW / 2 - (preset?.w ?? 200) / 2;
     const centerY = 100;
@@ -2233,6 +2150,68 @@ function CanvasEditor({
               </div>
             </div>
           ))}
+
+          <div className="px-3 py-3 border-b border-slate-100">
+            <div className="text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-2 inline-flex items-center gap-1.5">
+              <Heart className="h-3 w-3 text-rose-500" />
+              Marca Valparaíso
+            </div>
+            <div className="flex flex-wrap gap-1 mb-2">
+              {BRAND_ASSET_CATEGORIAS.map((c) => (
+                <button
+                  key={c.cat}
+                  onClick={() => setBrandCat(c.cat)}
+                  className={cn(
+                    "px-1.5 h-6 rounded-[6px] text-[10px] font-semibold transition",
+                    brandCat === c.cat
+                      ? "bg-rose-50 text-rose-700 border border-rose-200"
+                      : "text-slate-500 hover:bg-slate-100 border border-transparent"
+                  )}
+                >
+                  {c.label}
+                </button>
+              ))}
+            </div>
+            <div className="grid grid-cols-2 gap-1.5">
+              {BRAND_ASSETS.filter((a) => a.categoria === brandCat).map((a) => (
+                <button
+                  key={a.id}
+                  draggable
+                  onDragStart={(e) => {
+                    setDrag({
+                      kind: "palette",
+                      tipo: "imagem",
+                      preset: {
+                        src: a.src,
+                        w: 360,
+                        h: Math.max(60, Math.round(360 / a.ratio)),
+                        fit: "contain",
+                        radius: 0,
+                      },
+                    });
+                    e.dataTransfer.effectAllowed = "copy";
+                    e.dataTransfer.setData("text/plain", "imagem");
+                  }}
+                  onDragEnd={() => setDrag(null)}
+                  onClick={() => addBrandAsset(a)}
+                  className="group relative aspect-square rounded-[8px] border border-slate-200 bg-white overflow-hidden hover:border-rose-400 hover:shadow-soft transition cursor-grab active:cursor-grabbing"
+                  title={a.label}
+                  aria-label={`Adicionar ${a.label}`}
+                  style={{
+                    backgroundColor: a.tint ?? "#f8fafc",
+                  }}
+                >
+                  <img
+                    src={a.src}
+                    alt={a.label}
+                    className="absolute inset-0 w-full h-full object-contain p-1 group-hover:scale-105 transition"
+                    loading="lazy"
+                    draggable={false}
+                  />
+                </button>
+              ))}
+            </div>
+          </div>
 
           <div className="px-3 py-3 mt-auto border-t border-slate-100 bg-slate-50/40">
             <div className="text-[10px] text-slate-500 flex items-center gap-1.5">
@@ -4269,12 +4248,12 @@ function PageInspector({
           <div className="text-[10px] text-slate-500 font-semibold mb-1">Gradientes rápidos</div>
           <div className="grid grid-cols-3 gap-1.5">
             {[
-              templateGradient.anual_familia,
-              templateGradient.vip,
-              templateGradient.corporativo,
-              "linear-gradient(135deg,#ffffff,#f1f5f9)",
-              "linear-gradient(135deg,#ecfeff,#f0fdfa)",
-              "linear-gradient(135deg,#fef3c7,#fed7aa)",
+              templateGradient.valparaiso_park,
+              templateGradient.passaporte_anual,
+              templateGradient.passaporte_diario,
+              templateGradient.evento_corporativo,
+              templateGradient.aventura_radical,
+              templateGradient.promocoes,
             ].map((g) => (
               <button
                 key={g}
@@ -4743,7 +4722,7 @@ function NovaDialog({
   onClose: () => void;
   onCreate: (template: TemplateId, titulo: string, slug: string) => void;
 }) {
-  const [template, setTemplate] = useState<TemplateId>("anual_familia");
+  const [template, setTemplate] = useState<TemplateId>("valparaiso_park");
   const [titulo, setTitulo] = useState("");
   const [slug, setSlug] = useState("");
   const [slugEditado, setSlugEditado] = useState(false);
@@ -4758,7 +4737,7 @@ function NovaDialog({
     if (!slugEditado) setSlug(slugify(titulo));
   }, [titulo, slugEditado]);
 
-  const opts: TemplateId[] = ["anual_familia", "vip", "corporativo", "blank"];
+  const opts: TemplateId[] = ["valparaiso_park", "passaporte_anual", "passaporte_diario", "evento_corporativo", "festa_aniversario", "aventura_radical", "promocoes", "blank"];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">

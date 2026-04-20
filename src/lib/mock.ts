@@ -3907,26 +3907,26 @@ export const agendaEventos: AgendaEvento[] = [
 /* ═══════════════════════════ TIER 3 — GROWTH ═══════════════════════════ */
 
 export const landingPages: LandingPage[] = [
-  { id: "lp1", slug: "anual-familia-promo", titulo: "Passaporte Anual Família — Economia de 60%", visitas: 18420, leads_gerados: 1284, conversao_pct: 6.97, ultima_publicacao: days(12), status: "publicada", template: "anual_familia", blocos: [
+  { id: "lp1", slug: "anual-familia-promo", titulo: "Passaporte Anual Família — Economia de 60%", visitas: 18420, leads_gerados: 1284, conversao_pct: 6.97, ultima_publicacao: days(12), status: "publicada", template: "passaporte_anual", blocos: [
     { id: "b1", tipo: "hero", titulo: "Diversão o ano todo pra família", conteudo: "Passaporte anual por 12x R$ 111 — equivalente a R$ 9,25/visita." },
     { id: "b2", tipo: "beneficios", titulo: "O que está incluso", conteudo: "Acesso ilimitado + estacionamento + desconto em lanchonetes" },
     { id: "b3", tipo: "depoimentos", titulo: "Famílias felizes", conteudo: "3 depoimentos em vídeo" },
     { id: "b4", tipo: "formulario", titulo: "Garanta o seu", conteudo: "Nome, email, WhatsApp" },
     { id: "b5", tipo: "cta", titulo: "Falar com consultor agora", conteudo: "Botão WhatsApp" },
   ]},
-  { id: "lp2", slug: "diaria-verao", titulo: "Diária de Verão — Ingresso Antecipado", visitas: 42180, leads_gerados: 2108, conversao_pct: 5.00, ultima_publicacao: days(28), status: "publicada", template: "diaria", blocos: [
+  { id: "lp2", slug: "diaria-verao", titulo: "Diária de Verão — Ingresso Antecipado", visitas: 42180, leads_gerados: 2108, conversao_pct: 5.00, ultima_publicacao: days(28), status: "publicada", template: "passaporte_diario", blocos: [
     { id: "b1", tipo: "hero", titulo: "Verão no Aquapark Valparaíso", conteudo: "Ingressos antecipados com 20% off — válido por 90 dias." },
     { id: "b2", tipo: "precos", titulo: "Valores", conteudo: "Adulto R$ 89 | Criança R$ 45" },
     { id: "b3", tipo: "formulario", titulo: "Comprar agora", conteudo: "Checkout em 1 clique" },
   ]},
-  { id: "lp3", slug: "corporativo-empresas", titulo: "Experiências Corporativas", visitas: 4820, leads_gerados: 218, conversao_pct: 4.52, ultima_publicacao: days(45), status: "publicada", template: "corporativo", blocos: [
+  { id: "lp3", slug: "corporativo-empresas", titulo: "Experiências Corporativas", visitas: 4820, leads_gerados: 218, conversao_pct: 4.52, ultima_publicacao: days(45), status: "publicada", template: "evento_corporativo", blocos: [
     { id: "b1", tipo: "hero", titulo: "Transforme a confraternização da sua empresa", conteudo: "Pacotes a partir de 30 pax com atendimento dedicado." },
     { id: "b2", tipo: "beneficios", titulo: "Benefícios corporativos", conteudo: "Estacionamento exclusivo, área VIP, buffet" },
     { id: "b3", tipo: "formulario", titulo: "Solicitar proposta", conteudo: "Cotação em até 24h" },
   ]},
-  { id: "lp4", slug: "vip-black", titulo: "VIP Black — Experiência Premium", visitas: 1240, leads_gerados: 42, conversao_pct: 3.39, status: "rascunho", template: "vip", blocos: [
-    { id: "b1", tipo: "hero", titulo: "Experiência VIP Black", conteudo: "Área exclusiva, garçons dedicados, estacionamento VIP." },
-    { id: "b2", tipo: "precos", titulo: "Investimento", conteudo: "A partir de R$ 890" },
+  { id: "lp4", slug: "aventura-radical-tirolesa", titulo: "Aventura Radical — Tirolesa & Arvorismo", visitas: 1240, leads_gerados: 42, conversao_pct: 3.39, status: "rascunho", template: "aventura_radical", blocos: [
+    { id: "b1", tipo: "hero", titulo: "Do chão aos 25m de queda livre", conteudo: "Tirolesa 400m, arvorismo em 3 níveis, rapel e escalada." },
+    { id: "b2", tipo: "precos", titulo: "Ingressos aventura", conteudo: "A partir de R$ 89" },
   ]},
 ];
 

@@ -20,3 +20,6 @@ dist/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# brand crawl raw dump (curated copies live in public/brand/valparaiso/lib/)
+public/brand/valparaiso/raw/

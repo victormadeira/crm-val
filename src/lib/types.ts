@@ -1024,16 +1024,13 @@ export interface LandingPage {
   canvasBgImage?: string;
   canvasBgAnimation?: string;
   template:
-    | "anual_familia"
-    | "diaria"
-    | "corporativo"
-    | "vip"
-    | "vip_black"
-    | "festa_kids"
-    | "black_friday"
-    | "minimal"
-    | "radical"
     | "valparaiso_park"
+    | "passaporte_anual"
+    | "passaporte_diario"
+    | "evento_corporativo"
+    | "festa_aniversario"
+    | "aventura_radical"
+    | "promocoes"
     | "blank";
 }
 
