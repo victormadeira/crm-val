@@ -1,0 +1,39 @@
+{$CADDY_DOMAIN} {
+	encode gzip zstd
+
+	# Frontend web (Vite build) servido como assets estáticos
+	handle /assets/* {
+		root * /srv/web
+		file_server
+	}
+
+	# API NestJS rodando na mesma VPS no container api:3000
+	handle /api/* {
+		reverse_proxy api:3000
+	}
+
+	# Webhooks Meta — NUNCA atrás de basic auth
+	handle /webhooks/* {
+		reverse_proxy api:3000
+	}
+
+	# Fallback SPA
+	handle {
+		root * /srv/web
+		try_files {path} /index.html
+		file_server
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		X-Content-Type-Options    "nosniff"
+		X-Frame-Options           "DENY"
+		Referrer-Policy           "strict-origin-when-cross-origin"
+		Permissions-Policy        "geolocation=(), microphone=(), camera=()"
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}

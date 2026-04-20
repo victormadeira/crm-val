@@ -1,0 +1,1191 @@
+// =====================================================================
+// Valparaíso CRM — Prisma schema v1
+// Multi-tenant (tenantId em tudo), LGPD first-class, pgvector nativo.
+// =====================================================================
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions", "relationJoins"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pgcrypto, citext, pg_trgm, vector]
+}
+
+// =====================================================================
+// TENANCY + AUTH
+// =====================================================================
+
+model Tenant {
+  id          String   @id @default(uuid()) @db.Uuid
+  slug        String   @unique
+  name        String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users               User[]
+  leads               Lead[]
+  leadTags            LeadTag[]
+  pipelines           Pipeline[]
+  pipelineStages      PipelineStage[]
+  tasks               Task[]
+  bookings            Booking[]
+  proposals           Proposal[]
+  gamificationEvents  GamificationEvent[]
+  leadImports         LeadImport[]
+  waAccounts          WaAccount[]
+  waPhoneNumbers      WaPhoneNumber[]
+  waConversations     WaConversation[]
+  waMessages          WaMessage[]
+  waTemplates         WaTemplate[]
+  automationFlows     AutomationFlow[]
+  automationRuns      AutomationRun[]
+  landingPages        LandingPage[]
+  landingSubmissions  LandingSubmission[]
+  privacyRequests     PrivacyRequest[]
+  auditLogs           AuditLog[]
+  pushTokens          PushToken[]
+  attendantProfiles   AttendantProfile[]
+  leadAssignments     LeadAssignment[]
+  policyVersions      PolicyVersion[]
+  weatherForecasts              WeatherForecast[]
+  revenueActuals                RevenueActual[]
+  pricingConfigs                PricingConfig[]
+  revenueInsights               RevenueInsight[]
+  weatherRevenueCorrelations    WeatherRevenueCorrelation[]
+
+  @@index([slug])
+}
+
+enum UserRole {
+  ADMIN
+  SUPERVISOR
+  ATTENDANT
+  MARKETING
+  FINANCE
+  PARK_MANAGER
+}
+
+model User {
+  id            String   @id @default(uuid()) @db.Uuid
+  tenantId      String   @db.Uuid
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  email         String   @db.Citext
+  passwordHash  String
+  name          String
+  role          UserRole
+  active        Boolean  @default(true)
+  lastLoginAt   DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  sessions             Session[]
+  pushTokens           PushToken[]
+  attendantProfile     AttendantProfile?
+  leadsAssigned        LeadAssignment[]        @relation("AssignedTo")
+  leadsAssignedBy      LeadAssignment[]        @relation("AssignedBy")
+  waMessagesSent       WaMessage[]             @relation("SentBy")
+  auditLogs            AuditLog[]
+  privacyRequestsOwned PrivacyRequest[]        @relation("RequestedBy")
+  automationRunsBy     AutomationRun[]
+  tasksAssigned        Task[]                  @relation("TaskAssignee")
+  gamificationEvents   GamificationEvent[]
+
+  @@unique([tenantId, email])
+  @@index([tenantId, role])
+}
+
+model Session {
+  id               String   @id @default(uuid()) @db.Uuid
+  userId           String   @db.Uuid
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshTokenHash String
+  userAgent        String?
+  ip               String?
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  createdAt        DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+// =====================================================================
+// LEADS — funil + tags + captura
+// =====================================================================
+
+enum LeadOrigin {
+  META_ADS
+  GOOGLE_ADS
+  ORGANIC
+  REFERRAL
+  WALK_IN
+  LANDING_PAGE
+  IMPORT
+  MANUAL
+  OTHER
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  NEGOTIATING
+  WON
+  LOST
+  ARCHIVED
+}
+
+enum ProductInterest {
+  DAILY_PASS
+  ANNUAL_PASS
+  BIRTHDAY_PARTY
+  CORPORATE_EVENT
+  RADICAL_ADVENTURE
+  PROMOTION
+  OTHER
+}
+
+/// Segmento do funil — parque aquático tem dinâmicas muito diferentes por tipo
+/// de cliente (grupos escolares de 150 alunos ≠ ingresso avulso). Cada segmento
+/// tem um Pipeline próprio com estágios, thresholds e campos obrigatórios.
+enum PipelineSegment {
+  GRUPOS_ESCOLARES
+  EVENTOS_CORPORATIVOS
+  PACOTES_CONVENIOS
+  AVULSO
+}
+
+enum RottingStatus {
+  HEALTHY
+  WARNING
+  ROTTEN
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+enum BookingStatus {
+  TENTATIVE
+  CONFIRMED
+  CANCELLED
+}
+
+enum ProposalStatus {
+  DRAFT
+  SENT
+  OPENED
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+/// Um funil por segmento. `position` define ordem de exibição no Kanban.
+model Pipeline {
+  id         String          @id @default(uuid()) @db.Uuid
+  tenantId   String          @db.Uuid
+  tenant     Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name       String
+  segment    PipelineSegment
+  color      String?
+  position   Int             @default(0)
+  isDefault  Boolean         @default(false)
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  stages PipelineStage[]
+  leads  Lead[]
+
+  @@unique([tenantId, segment])
+  @@index([tenantId, position])
+}
+
+/// Estágio dentro de um Pipeline. `requiredFields` lista os campos que o lead
+/// precisa ter preenchidos pra mover PARA esse estágio (blueprint).
+/// `autoTasks` lista tasks criadas automaticamente ao entrar no estágio.
+/// `rottingDays` é o threshold em dias p/ WARNING; 2x pra ROTTEN.
+model PipelineStage {
+  id              String         @id @default(uuid()) @db.Uuid
+  tenantId        String         @db.Uuid
+  tenant          Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  pipelineId      String         @db.Uuid
+  pipeline        Pipeline       @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  name            String
+  order           Int
+  color           String?
+  isFinal         Boolean        @default(false)
+  probability     Int            @default(0)  // 0-100, usado no forecast ponderado
+  rottingDays     Int            @default(7)
+  requiredFields  Json           @default("[]")
+  autoTasks       Json           @default("[]")
+  createdAt       DateTime       @default(now())
+
+  leads Lead[]
+
+  @@unique([pipelineId, name])
+  @@index([tenantId, pipelineId, order])
+}
+
+model LeadTag {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @db.Uuid
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name      String
+  color     String?
+  createdAt DateTime @default(now())
+
+  leads LeadTagOnLead[]
+
+  @@unique([tenantId, name])
+}
+
+model Lead {
+  id                String           @id @default(uuid()) @db.Uuid
+  tenantId          String           @db.Uuid
+  tenant            Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Hard-required
+  name              String
+  phoneE164         String           // normalizado +55DDDNNNNNNNNN
+  origin            LeadOrigin
+
+  // Soft-required (podem estar vazios na entrada, exigidos p/ avançar etapa)
+  email             String?          @db.Citext
+  visitDate         DateTime?        @db.Date
+  groupSize         Int?
+  productInterest   ProductInterest?
+
+  // Enriquecido pela IA
+  cityGuess         String?
+  ageGuess          String?
+  aiScore           Int?             // 0..100
+  aiReason          String?
+
+  // Funil
+  status              LeadStatus       @default(NEW)
+  pipelineId          String?          @db.Uuid
+  pipeline            Pipeline?        @relation(fields: [pipelineId], references: [id], onDelete: SetNull)
+  segment             PipelineSegment?
+  stageId             String?          @db.Uuid
+  stage               PipelineStage?   @relation(fields: [stageId], references: [id], onDelete: SetNull)
+
+  // Rotting (Fase 2 Acquapark PRD) — calculado a partir de lastActivityAt + stage.rottingDays
+  lastActivityAt      DateTime?
+  rottingStatus       RottingStatus    @default(HEALTHY)
+
+  // Blueprint (Fase 1 PRD) — percentual de requiredFields preenchidos no stage atual
+  blueprintCompletion Int              @default(0)
+
+  // Campos custom por segmento (num_participantes, data_pretendida, etc.)
+  customFields        Json             @default("{}")
+
+  // Lead scoring heurístico (Fase 4 PRD) — snapshot das regras aplicadas
+  scoreBreakdown      Json?
+
+  // Metadados
+  sourceCampaign    String?
+  sourceAdset       String?
+  sourceAd          String?
+  sourceFbclid      String?
+  sourceGclid       String?
+
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  lastContactAt     DateTime?
+  archivedAt        DateTime?
+  anonymizedAt      DateTime?        // LGPD
+
+  // Relações
+  tags              LeadTagOnLead[]
+  assignments       LeadAssignment[]
+  waConversations   WaConversation[]
+  submissions       LandingSubmission[]
+  consents          LeadConsent[]
+  embeddings        LeadEmbedding[]
+  automationRuns    AutomationRun[]
+  notes             LeadNote[]
+  events            LeadEvent[]
+  tasks             Task[]
+  bookings          Booking[]
+  proposals         Proposal[]
+
+  @@unique([tenantId, phoneE164], name: "tenant_phone_unique")
+  @@index([tenantId, status])
+  @@index([tenantId, pipelineId, stageId])
+  @@index([tenantId, rottingStatus])
+  @@index([tenantId, aiScore])
+  @@index([tenantId, createdAt])
+  @@index([tenantId, origin])
+  @@index([tenantId, lastActivityAt])
+}
+
+model LeadTagOnLead {
+  leadId    String   @db.Uuid
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  tagId     String   @db.Uuid
+  tag       LeadTag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([leadId, tagId])
+  @@index([tagId])
+}
+
+model LeadNote {
+  id        String   @id @default(uuid()) @db.Uuid
+  leadId    String   @db.Uuid
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  authorId  String   @db.Uuid
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([leadId, createdAt])
+}
+
+enum LeadEventKind {
+  CREATED
+  STAGE_CHANGED
+  PIPELINE_CHANGED
+  STATUS_CHANGED
+  ASSIGNED
+  UNASSIGNED
+  TAG_ADDED
+  TAG_REMOVED
+  MESSAGE_IN
+  MESSAGE_OUT
+  NOTE_ADDED
+  SCORE_UPDATED
+  ROTTING_CHANGED
+  TASK_CREATED
+  TASK_COMPLETED
+  PROPOSAL_SENT
+  PROPOSAL_OPENED
+  BOOKING_CREATED
+  FIELD_UPDATED
+  CONSENT_GIVEN
+  CONSENT_REVOKED
+  ANONYMIZED
+}
+
+model LeadEvent {
+  id        String        @id @default(uuid()) @db.Uuid
+  leadId    String        @db.Uuid
+  lead      Lead          @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  kind      LeadEventKind
+  payload   Json
+  actorId   String?       @db.Uuid
+  createdAt DateTime      @default(now())
+
+  @@index([leadId, createdAt])
+  @@index([kind, createdAt])
+}
+
+// ======= Embeddings (pgvector) — lead rico p/ similaridade + IA ======
+model LeadEmbedding {
+  leadId     String                        @id @db.Uuid
+  lead       Lead                          @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  model      String
+  vector     Unsupported("vector(1536)")
+  updatedAt  DateTime                      @updatedAt
+}
+
+// =====================================================================
+// LEAD ASSIGNMENT + ATTENDANT AVAILABILITY
+// =====================================================================
+
+enum AssignmentReason {
+  AI_SUGGESTION
+  ROUND_ROBIN
+  MANUAL_SUPERVISOR
+  MANUAL_SELF_CLAIM
+  REASSIGNED
+}
+
+model AttendantProfile {
+  userId          String   @id @db.Uuid
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenantId        String   @db.Uuid
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  maxConcurrent   Int      @default(40)
+  isAvailable     Boolean  @default(true)
+  skillsTags      String[] @default([])
+  lastActiveAt    DateTime?
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId, isAvailable])
+}
+
+model LeadAssignment {
+  id             String            @id @default(uuid()) @db.Uuid
+  tenantId       String            @db.Uuid
+  tenant         Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  leadId         String            @db.Uuid
+  lead           Lead              @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  assignedToId   String            @db.Uuid
+  assignedTo     User              @relation("AssignedTo", fields: [assignedToId], references: [id])
+  assignedById   String?           @db.Uuid
+  assignedBy     User?             @relation("AssignedBy", fields: [assignedById], references: [id])
+  reason         AssignmentReason
+  aiScoreAtTime  Int?
+  active         Boolean           @default(true)
+  startedAt      DateTime          @default(now())
+  endedAt        DateTime?
+
+  @@index([leadId, active])
+  @@index([tenantId, assignedToId, active])
+}
+
+// =====================================================================
+// WHATSAPP (Meta Cloud API direto)
+// =====================================================================
+
+model WaAccount {
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String   @db.Uuid
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  wabaId          String   @unique             // Meta WABA id
+  businessName    String
+  accessToken     String                       // criptografado em repouso (AES-GCM)
+  verifyToken     String                       // webhook verification
+  appSecret       String                       // p/ HMAC X-Hub-Signature-256
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  phoneNumbers    WaPhoneNumber[]
+  templates       WaTemplate[]
+}
+
+model WaPhoneNumber {
+  id                String    @id @default(uuid()) @db.Uuid
+  tenantId          String    @db.Uuid
+  tenant            Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  accountId         String    @db.Uuid
+  account           WaAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  phoneNumberId     String    @unique          // Meta phone_number_id
+  displayPhoneE164  String
+  qualityRating     String?
+  verifiedName      String?
+  createdAt         DateTime  @default(now())
+
+  conversations WaConversation[]
+  messages      WaMessage[]
+
+  @@index([tenantId])
+}
+
+enum WaConversationStatus {
+  OPEN
+  EXPIRED          // fora da janela 24h
+  CLOSED
+}
+
+model WaConversation {
+  id                   String                @id @default(uuid()) @db.Uuid
+  tenantId             String                @db.Uuid
+  tenant               Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  leadId               String?               @db.Uuid
+  lead                 Lead?                 @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  phoneNumberId        String                @db.Uuid
+  phoneNumber          WaPhoneNumber         @relation(fields: [phoneNumberId], references: [id], onDelete: Cascade)
+  contactWaId          String                // número do cliente
+  status               WaConversationStatus  @default(OPEN)
+  windowExpiresAt      DateTime?             // janela 24h Meta
+  lastInboundAt        DateTime?
+  lastOutboundAt       DateTime?
+  lastReadAtByUserId   String?               @db.Uuid
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+
+  messages WaMessage[]
+
+  @@unique([tenantId, phoneNumberId, contactWaId])
+  @@index([tenantId, status])
+}
+
+enum WaDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum WaMessageKind {
+  TEXT
+  IMAGE
+  VIDEO
+  AUDIO
+  DOCUMENT
+  STICKER
+  LOCATION
+  CONTACTS
+  INTERACTIVE
+  TEMPLATE
+  REACTION
+  SYSTEM
+  UNKNOWN
+}
+enum WaMessageStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  READ
+  FAILED
+  RECEIVED
+}
+
+model WaMessage {
+  id               String            @id @default(uuid()) @db.Uuid
+  tenantId         String            @db.Uuid
+  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  conversationId   String            @db.Uuid
+  conversation     WaConversation    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  phoneNumberId    String            @db.Uuid
+  phoneNumber      WaPhoneNumber     @relation(fields: [phoneNumberId], references: [id], onDelete: Cascade)
+  waMessageId      String?           @unique   // wamid retornado pela Meta
+  direction        WaDirection
+  kind             WaMessageKind
+  status           WaMessageStatus
+  text             String?
+  mediaUrl         String?
+  mediaMimeType    String?
+  payload          Json              // payload bruto (fallback)
+  templateId       String?           @db.Uuid
+  template         WaTemplate?       @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  errorCode        String?
+  errorMessage     String?
+  sentById         String?           @db.Uuid
+  sentBy           User?             @relation("SentBy", fields: [sentById], references: [id])
+  sentAt           DateTime?
+  deliveredAt      DateTime?
+  readAt           DateTime?
+  createdAt        DateTime          @default(now())
+
+  @@index([conversationId, createdAt])
+  @@index([tenantId, direction, createdAt])
+  @@index([waMessageId])
+}
+
+enum WaTemplateStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  REJECTED
+  PAUSED
+  DISABLED
+}
+
+model WaTemplate {
+  id           String           @id @default(uuid()) @db.Uuid
+  tenantId     String           @db.Uuid
+  tenant       Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  accountId    String           @db.Uuid
+  account      WaAccount        @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  name         String
+  language     String
+  category     String
+  status       WaTemplateStatus @default(DRAFT)
+  components   Json
+  metaId       String?          @unique
+  rejectReason String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  messages WaMessage[]
+
+  @@unique([accountId, name, language])
+}
+
+// =====================================================================
+// AUTOMAÇÕES (engine próprio)
+// =====================================================================
+
+enum AutomationTriggerKind {
+  LEAD_CREATED
+  MESSAGE_RECEIVED
+  NO_REPLY_TIMEOUT
+  TAG_APPLIED
+  STAGE_CHANGED
+  SCORE_THRESHOLD_CROSSED
+  SCHEDULED_CRON
+}
+
+enum AutomationStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+model AutomationFlow {
+  id          String                  @id @default(uuid()) @db.Uuid
+  tenantId    String                  @db.Uuid
+  tenant      Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  trigger     AutomationTriggerKind
+  triggerCfg  Json                    // filtros específicos do trigger
+  graph       Json                    // nodes + edges (editor visual)
+  status      AutomationStatus        @default(DRAFT)
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
+
+  runs AutomationRun[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, trigger])
+}
+
+enum AutomationRunStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
+  DEAD_LETTERED
+  CANCELLED
+}
+
+model AutomationRun {
+  id          String                @id @default(uuid()) @db.Uuid
+  tenantId    String                @db.Uuid
+  tenant      Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  flowId      String                @db.Uuid
+  flow        AutomationFlow        @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  leadId      String?               @db.Uuid
+  lead        Lead?                 @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  triggeredById String?             @db.Uuid
+  triggeredBy   User?               @relation(fields: [triggeredById], references: [id])
+  status      AutomationRunStatus   @default(PENDING)
+  context     Json
+  attempts    Int                   @default(0)
+  lastError   String?
+  startedAt   DateTime?
+  finishedAt  DateTime?
+  createdAt   DateTime              @default(now())
+
+  steps AutomationRunStep[]
+
+  @@index([tenantId, status])
+  @@index([flowId, createdAt])
+  @@index([leadId])
+}
+
+model AutomationRunStep {
+  id        String               @id @default(uuid()) @db.Uuid
+  runId     String               @db.Uuid
+  run       AutomationRun        @relation(fields: [runId], references: [id], onDelete: Cascade)
+  nodeId    String
+  kind      String
+  status    AutomationRunStatus
+  input     Json
+  output    Json?
+  error     String?
+  startedAt DateTime             @default(now())
+  endedAt   DateTime?
+
+  @@index([runId, startedAt])
+}
+
+// =====================================================================
+// LANDING PAGES + SUBMISSIONS
+// =====================================================================
+
+enum LandingPageStatus {
+  DRAFT
+  PUBLISHED
+  PAUSED
+  ARCHIVED
+}
+
+model LandingPage {
+  id          String             @id @default(uuid()) @db.Uuid
+  tenantId    String             @db.Uuid
+  tenant      Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  slug        String
+  title       String
+  template    String
+  status      LandingPageStatus  @default(DRAFT)
+  document    Json               // elementos do builder (src/lib/types.ts LPElemento[])
+  metaPixelId String?
+  gaId        String?
+  clarityId   String?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  publishedAt DateTime?
+
+  submissions LandingSubmission[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId, status])
+}
+
+model LandingSubmission {
+  id            String       @id @default(uuid()) @db.Uuid
+  tenantId      String       @db.Uuid
+  tenant        Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  pageId        String       @db.Uuid
+  page          LandingPage  @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  leadId        String?      @db.Uuid
+  lead          Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  payload       Json
+  userAgent     String?
+  ip            String?
+  utmSource     String?
+  utmMedium     String?
+  utmCampaign   String?
+  fbclid        String?
+  gclid         String?
+  createdAt     DateTime     @default(now())
+
+  @@index([pageId, createdAt])
+  @@index([tenantId, createdAt])
+}
+
+// =====================================================================
+// IMPORT (CSV RD Station)
+// =====================================================================
+
+enum LeadImportStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
+  PARTIAL
+}
+
+model LeadImport {
+  id            String            @id @default(uuid()) @db.Uuid
+  tenantId      String            @db.Uuid
+  tenant        Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sourceLabel   String
+  fieldMap      Json
+  fileRef       String            // caminho no storage
+  dryRun        Boolean           @default(true)
+  status        LeadImportStatus  @default(PENDING)
+  totalRows     Int               @default(0)
+  importedRows  Int               @default(0)
+  skippedRows   Int               @default(0)
+  errorRows     Int               @default(0)
+  errorsSample  Json?
+  createdById   String            @db.Uuid
+  startedAt     DateTime?
+  finishedAt    DateTime?
+  createdAt     DateTime          @default(now())
+
+  @@index([tenantId, status])
+}
+
+// =====================================================================
+// LGPD — consentimento, política, requisições, auditoria
+// =====================================================================
+
+enum ConsentPurpose {
+  MARKETING
+  TRANSACTIONAL
+  ANALYTICS
+  WHATSAPP
+}
+
+enum ConsentChannel {
+  LANDING_PAGE
+  WHATSAPP
+  PHONE
+  IN_PERSON
+  IMPORT
+}
+
+model PolicyVersion {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @db.Uuid
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  version    String
+  body       String
+  publishedAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  consents LeadConsent[]
+
+  @@unique([tenantId, version])
+}
+
+model LeadConsent {
+  id               String           @id @default(uuid()) @db.Uuid
+  leadId           String           @db.Uuid
+  lead             Lead             @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  purpose          ConsentPurpose
+  granted          Boolean
+  channel          ConsentChannel
+  policyVersionId  String           @db.Uuid
+  policyVersion    PolicyVersion    @relation(fields: [policyVersionId], references: [id])
+  ip               String?
+  userAgent        String?
+  evidence         Json
+  givenAt          DateTime         @default(now())
+  revokedAt        DateTime?
+
+  @@index([leadId, purpose])
+}
+
+enum PrivacyRequestKind {
+  ACCESS
+  EXPORT
+  DELETION
+  RECTIFICATION
+}
+
+enum PrivacyRequestStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  REJECTED
+}
+
+model PrivacyRequest {
+  id             String                @id @default(uuid()) @db.Uuid
+  tenantId       String                @db.Uuid
+  tenant         Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  leadId         String?               @db.Uuid
+  requesterEmail String                @db.Citext
+  requesterPhone String?
+  kind           PrivacyRequestKind
+  status         PrivacyRequestStatus  @default(PENDING)
+  requestedById  String?               @db.Uuid
+  requestedBy    User?                 @relation("RequestedBy", fields: [requestedById], references: [id])
+  note           String?
+  fulfilledAt    DateTime?
+  createdAt      DateTime              @default(now())
+
+  @@index([tenantId, status])
+}
+
+// Append-only — nunca UPDATE / DELETE.
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @db.Uuid
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  actorId    String?  @db.Uuid
+  actor      User?    @relation(fields: [actorId], references: [id])
+  action     String   // ex: "lead.create", "lead.export", "user.login"
+  entity     String   // ex: "Lead"
+  entityId   String?
+  ip         String?
+  userAgent  String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+  @@index([entity, entityId])
+}
+
+// =====================================================================
+// MOBILE PUSH
+// =====================================================================
+
+enum PushPlatform {
+  IOS
+  ANDROID
+  WEB
+}
+
+model PushToken {
+  id         String       @id @default(uuid()) @db.Uuid
+  tenantId   String       @db.Uuid
+  tenant     Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId     String       @db.Uuid
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform   PushPlatform
+  token      String
+  deviceId   String?
+  lastSeenAt DateTime?
+  createdAt  DateTime     @default(now())
+
+  @@unique([userId, token])
+  @@index([tenantId, userId])
+}
+
+// =====================================================================
+// TASKS, BOOKINGS, PROPOSALS (Acquapark PRD Fase 1–2)
+// =====================================================================
+
+/// Activity-based selling: tasks automáticas criadas ao entrar em estágio
+/// via PipelineStage.autoTasks, ou manualmente pelo vendedor.
+model Task {
+  id            String     @id @default(uuid()) @db.Uuid
+  tenantId      String     @db.Uuid
+  tenant        Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  leadId        String?    @db.Uuid
+  lead          Lead?      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  assigneeId    String?    @db.Uuid
+  assignee      User?      @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  title         String
+  description   String?
+  dueAt         DateTime?
+  status        TaskStatus @default(PENDING)
+  /// Origem da task — "stage_entry:{stageId}" quando criada por auto_task,
+  /// null quando criada manualmente, "handoff" quando veio do agente IA.
+  createdByRule String?
+  completedAt   DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@index([tenantId, status])
+  @@index([leadId])
+  @@index([assigneeId, status])
+  @@index([tenantId, dueAt])
+}
+
+/// Calendário de capacidade do parque — p/ não perder data pra concorrente.
+/// O deal em qualificação cria uma Booking TENTATIVE; ao fechar vira CONFIRMED.
+model Booking {
+  id              String        @id @default(uuid()) @db.Uuid
+  tenantId        String        @db.Uuid
+  tenant          Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  leadId          String?       @db.Uuid
+  lead            Lead?         @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  title           String
+  eventDate       DateTime      @db.Date
+  numParticipants Int
+  status          BookingStatus @default(TENTATIVE)
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([tenantId, eventDate])
+  @@index([leadId])
+}
+
+/// Proposal tracking com pixel — o token é a chave pública no link enviado
+/// ao cliente (`/p/:token`). O endpoint de view registra ProposalView e
+/// incrementa openedCount. Uma proposta aberta reseta rotting do deal.
+model Proposal {
+  id           String         @id @default(uuid()) @db.Uuid
+  tenantId     String         @db.Uuid
+  tenant       Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  leadId       String         @db.Uuid
+  lead         Lead           @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  token        String         @unique
+  title        String
+  valueCents   Int
+  validUntil   DateTime?
+  content      Json
+  status       ProposalStatus @default(DRAFT)
+  sentAt       DateTime?
+  openedAt     DateTime?
+  openedCount  Int            @default(0)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  views ProposalView[]
+
+  @@index([tenantId, status])
+  @@index([leadId])
+}
+
+model ProposalView {
+  id          String   @id @default(uuid()) @db.Uuid
+  proposalId  String   @db.Uuid
+  proposal    Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  ip          String?
+  userAgent   String?
+  viewedAt    DateTime @default(now())
+
+  @@index([proposalId, viewedAt])
+}
+
+// =====================================================================
+// GAMIFICAÇÃO (Acquapark PRD Fase 4)
+// =====================================================================
+
+model GamificationEvent {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @db.Uuid
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  points    Int
+  reason    String
+  badge     String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+  @@index([userId, createdAt])
+}
+
+// =====================================================================
+// REVENUE INTELLIGENCE (clima + previsão + histórico + preços + insights)
+// =====================================================================
+
+enum WeatherCategory {
+  EXCELENTE
+  BOM
+  REGULAR
+  RUIM
+  PESSIMO
+}
+
+enum DayType {
+  FIM_DE_SEMANA
+  FERIADO
+  DIA_UTIL
+  EVENTO_ESPECIAL
+}
+
+enum RainIntensity {
+  NENHUMA
+  LEVE
+  MODERADA
+  FORTE
+}
+
+enum PricingProduct {
+  INGRESSO_AVULSO
+  PASSAPORTE_DIA
+  PASSAPORTE_MENSAL
+  PASSAPORTE_ANUAL
+  GRUPO_ESCOLAR
+  GRUPO_CORPORATIVO
+}
+
+enum InsightType {
+  OPORTUNIDADE
+  RISCO
+  ACAO
+  SAZONALIDADE
+}
+
+enum InsightPriority {
+  ALTA
+  MEDIA
+  BAIXA
+}
+
+enum InsightActionTaken {
+  PENDENTE
+  ACEITOU
+  IGNOROU
+}
+
+/// Previsão climática persistida por data — snapshot das previsões consultadas
+/// na Open-Meteo. Mantém histórico para comparar previsto x realizado.
+model WeatherForecast {
+  id                 String          @id @default(uuid()) @db.Uuid
+  tenantId           String          @db.Uuid
+  tenant             Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  forecastDate       DateTime        @db.Date
+  fetchedAt          DateTime        @default(now())
+  tempMax            Float
+  tempMin            Float
+  precipProbability  Int
+  precipSum          Float
+  windspeedMax       Float
+  uvIndexMax         Float
+  weathercode        Int
+  weatherScore       Int             // 0..100
+  weatherCategory    WeatherCategory
+
+  @@index([tenantId, forecastDate])
+  @@index([tenantId, fetchedAt])
+}
+
+/// Receita e operação real por dia — fonte de aprendizado histórico.
+/// Usado p/ correlação clima×receita, regressão linear, forecast.
+model RevenueActual {
+  id                  String        @id @default(uuid()) @db.Uuid
+  tenantId            String        @db.Uuid
+  tenant              Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  date                DateTime      @db.Date
+  grossRevenueCents   Int
+  visitorCount        Int?
+  ticketAvgCents      Int?
+  capacityPct         Float?
+  capacityTotal       Int?
+  tempMaxActual       Float?
+  weatherScoreActual  Int?
+  hadRain             Boolean       @default(false)
+  rainIntensity       RainIntensity @default(NENHUMA)
+  dayType             DayType
+  promotionsActive    Json          @default("[]")
+  groupsCount         Int?
+  groupsRevenueCents  Int?
+  avulsoRevenueCents  Int?
+  notes               String?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  @@unique([tenantId, date])
+  @@index([tenantId, date])
+  @@index([tenantId, dayType])
+}
+
+/// Configuração de preços por produto — editável pelo gestor.
+/// Multiplicadores aplicados ao basePrice conforme categoria climática.
+model PricingConfig {
+  id              String          @id @default(uuid()) @db.Uuid
+  tenantId        String          @db.Uuid
+  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  product         PricingProduct
+  basePriceCents  Int
+  minPriceCents   Int?
+  maxPriceCents   Int?
+  multExcelente   Float           @default(1.20)
+  multBom         Float           @default(1.00)
+  multRegular     Float           @default(0.90)
+  multRuim        Float           @default(0.78)
+  multPessimo     Float           @default(0.65)
+  isActive        Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@unique([tenantId, product])
+}
+
+/// Snapshot de insight gerado pela IA — mantém histórico p/ aprendizado
+/// e medição de outcome real (quanto realmente rendeu o dia vs previsão).
+model RevenueInsight {
+  id                   String              @id @default(uuid()) @db.Uuid
+  tenantId             String              @db.Uuid
+  tenant               Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  generatedAt          DateTime            @default(now())
+  targetDate           DateTime?           @db.Date
+  insightType          InsightType
+  priority             InsightPriority     @default(MEDIA)
+  title                String
+  description          String
+  impactEstimateCents  Int?
+  actionSuggested      String?
+  whatsappMessage      String?
+  actionTaken          InsightActionTaken  @default(PENDENTE)
+  actualOutcomeCents   Int?
+  modelVersion         String?
+  contextJson          Json?
+
+  @@index([tenantId, generatedAt])
+  @@index([tenantId, targetDate])
+}
+
+/// Correlação clima×receita — calculada periodicamente via regressão linear.
+model WeatherRevenueCorrelation {
+  id               String    @id @default(uuid()) @db.Uuid
+  tenantId         String    @db.Uuid
+  tenant           Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  calculatedAt     DateTime  @default(now())
+  periodDays       Int
+  sampleCount      Int
+  pearsonR         Float?
+  rSquared         Float?
+  slope            Float?
+  intercept        Float?
+  avgRevExcelente  Float?
+  avgRevBom        Float?
+  avgRevRegular    Float?
+  avgRevRuim       Float?
+  avgRevPessimo    Float?
+  avgRevWeekend    Float?
+  avgRevHoliday    Float?
+  avgRevWeekday    Float?
+
+  @@index([tenantId, calculatedAt])
+}

@@ -23,3 +23,15 @@ yarn-error.log*
 
 # brand crawl raw dump (curated copies live in public/brand/valparaiso/lib/)
 public/brand/valparaiso/raw/
+
+# monorepo
+apps/*/dist/
+apps/*/node_modules/
+apps/*/.env
+apps/*/.env.local
+apps/*/coverage/
+packages/*/dist/
+packages/*/node_modules/
+
+# prisma
+apps/api/prisma/migrations/*/migration.sql.backup
