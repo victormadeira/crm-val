@@ -1,6 +1,16 @@
 import React from 'react';
-import { UserPresence, STATUS_COLOR, STATUS_LABEL, PresenceStatus } from '@/lib/presence/presence.types';
-import { Wifi, WifiOff, Users, MessageCircle, Phone, Coffee } from 'lucide-react';
+import { UserPresence, STATUS_COLOR, PresenceStatus } from '@/lib/presence/presence.types';
+import {
+  Wifi,
+  WifiOff,
+  Users,
+  MessageCircle,
+  Phone,
+  Coffee,
+  Inbox,
+  TrendingUp,
+  Activity,
+} from 'lucide-react';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // RoomStatusBar
@@ -36,6 +46,16 @@ export function RoomStatusBar({ users, roomName, connected, filterStatus, onFilt
     away_break: users.filter((u) => u.status === 'away_break').length,
     offline: users.filter((u) => u.status === 'offline').length,
   };
+
+  const active = users.filter((u) => u.status !== 'offline' && u.metrics);
+  const totalFila = active.reduce((s, u) => s + (u.metrics?.filaAtual ?? 0), 0);
+  const totalAtend = active.reduce((s, u) => s + (u.metrics?.atendimentosHoje ?? 0), 0);
+  const avgTempo = active.length
+    ? Math.round(
+        active.reduce((s, u) => s + (u.metrics?.tempoMedioResposta ?? 0), 0) / active.length,
+      )
+    : 0;
+  const ocupados = counts.busy_chat + counts.busy_call;
 
   const filters: StatusCount[] = [
     {
@@ -83,9 +103,9 @@ export function RoomStatusBar({ users, roomName, connected, filterStatus, onFilt
   ];
 
   return (
-    <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-200 bg-white">
+    <div className="flex items-center gap-4 px-4 py-2.5 border-b border-slate-200 bg-white">
       {/* Nome da sala e status de conexão */}
-      <div className="flex items-center gap-2.5">
+      <div className="flex items-center gap-2.5 shrink-0">
         <div className="flex items-center gap-1.5">
           <span
             className="h-2 w-2 rounded-full"
@@ -99,8 +119,36 @@ export function RoomStatusBar({ users, roomName, connected, filterStatus, onFilt
         <span className="text-sm font-semibold text-slate-700">{roomName}</span>
       </div>
 
+      {/* KPIs agregados */}
+      <div className="hidden lg:flex items-center gap-2">
+        <KpiPill
+          icon={<Activity className="h-3.5 w-3.5" />}
+          label="Ocupados"
+          value={`${ocupados}/${counts.all - counts.offline}`}
+          tone="blue"
+        />
+        <KpiPill
+          icon={<Inbox className="h-3.5 w-3.5" />}
+          label="Fila total"
+          value={String(totalFila)}
+          tone={totalFila > 20 ? 'amber' : 'slate'}
+        />
+        <KpiPill
+          icon={<TrendingUp className="h-3.5 w-3.5" />}
+          label="Atend. hoje"
+          value={String(totalAtend)}
+          tone="slate"
+        />
+        <KpiPill
+          icon={<Coffee className="h-3.5 w-3.5" />}
+          label="T. médio"
+          value={`${avgTempo}m`}
+          tone="slate"
+        />
+      </div>
+
       {/* Filtros de status */}
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 ml-auto">
         {filters.map((f) => {
           const isActive = filterStatus === f.status;
           return (
@@ -126,6 +174,34 @@ export function RoomStatusBar({ users, roomName, connected, filterStatus, onFilt
           );
         })}
       </div>
+    </div>
+  );
+}
+
+function KpiPill({
+  icon,
+  label,
+  value,
+  tone,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  tone: 'slate' | 'blue' | 'amber';
+}) {
+  const toneClass =
+    tone === 'blue'
+      ? 'bg-blue-50 text-blue-700 border-blue-100'
+      : tone === 'amber'
+        ? 'bg-amber-50 text-amber-700 border-amber-200'
+        : 'bg-slate-50 text-slate-700 border-slate-200';
+  return (
+    <div
+      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs ${toneClass}`}
+    >
+      <span className="opacity-70">{icon}</span>
+      <span className="text-[10px] font-medium opacity-70">{label}</span>
+      <span className="font-bold tabular-nums">{value}</span>
     </div>
   );
 }

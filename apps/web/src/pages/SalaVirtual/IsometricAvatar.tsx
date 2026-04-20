@@ -1,4 +1,11 @@
-import { UserPresence, STATUS_COLOR, PresenceStatus } from "@/lib/presence/presence.types";
+import {
+  UserPresence,
+  STATUS_COLOR,
+  STATUS_LABEL,
+  ROLE_LABEL,
+  ACTIVITY_LABEL,
+  PresenceStatus,
+} from "@/lib/presence/presence.types";
 
 interface Props {
   user: UserPresence;
@@ -309,6 +316,17 @@ export function IsometricAvatar({ user, isSelected, onClick, px, py }: Props) {
   const isBot = user.role === "bot";
   const opacity = isOffline ? 0.4 : 1;
 
+  const tooltip = (() => {
+    const lines = [`${user.nome} · ${ROLE_LABEL[user.role]}`, STATUS_LABEL[user.status]];
+    if (user.currentActivity) {
+      lines.push(
+        `${ACTIVITY_LABEL[user.currentActivity.type]}: ${user.currentActivity.targetName}`,
+      );
+    }
+    if (user.metrics?.filaAtual) lines.push(`${user.metrics.filaAtual} na fila`);
+    return lines.join("\n");
+  })();
+
   return (
     <g
       transform={`translate(${px}, ${py})`}
@@ -316,6 +334,7 @@ export function IsometricAvatar({ user, isSelected, onClick, px, py }: Props) {
       style={{ cursor: "pointer", opacity }}
       className="presence-avatar"
     >
+      <title>{tooltip}</title>
       <rect x="-26" y="-42" width="52" height="76" fill="transparent" />
       <GroundShadow selected={isSelected} color={palette.shirt} />
       <IsoDesk colors={palette} />

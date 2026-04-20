@@ -8,6 +8,7 @@ import {
   ACTIVITY_LABEL,
 } from '@/lib/presence/presence.types';
 import { Avatar } from '@/components/ui/Avatar';
+import { usePresenceStore } from '@/lib/presence/presenceStore';
 import {
   MessageCircle,
   Phone,
@@ -22,6 +23,11 @@ import {
   Bot,
   Instagram,
   Headphones,
+  Send,
+  UserCog,
+  Pause,
+  Play,
+  CheckCircle2,
 } from 'lucide-react';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -199,10 +205,13 @@ export function AttendantPanel({ user, onClose }: Props) {
             </div>
           )}
 
+          {/* ── Ações do supervisor ── */}
+          {user.role !== 'bot' && <SupervisorActions user={user} />}
+
           {/* ── Ações rápidas ── */}
           <div className="p-4">
             <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-3">
-              Ações rápidas
+              Links rápidos
             </div>
             <div className="space-y-2">
               <QuickActionButton
@@ -270,5 +279,226 @@ function QuickActionButton({
       <span className="text-slate-400">{icon}</span>
       {label}
     </a>
+  );
+}
+
+function SupervisorActions({ user }: { user: UserPresence }) {
+  const _update = usePresenceStore((s) => s._update);
+  const users = usePresenceStore((s) => s.users);
+  const [whisperOpen, setWhisperOpen] = useState(false);
+  const [whisperText, setWhisperText] = useState('');
+  const [reassignOpen, setReassignOpen] = useState(false);
+  const [reassignTarget, setReassignTarget] = useState('');
+  const [feedback, setFeedback] = useState<string | null>(null);
+
+  const isPaused = user.status === 'away_break';
+
+  function flashFeedback(msg: string) {
+    setFeedback(msg);
+    window.setTimeout(() => setFeedback(null), 2500);
+  }
+
+  function handleWhisperSend() {
+    if (!whisperText.trim()) return;
+    flashFeedback(`Sussurro enviado para ${user.nome.split(' ')[0]}`);
+    setWhisperText('');
+    setWhisperOpen(false);
+  }
+
+  function handlePauseToggle() {
+    _update({
+      user: {
+        ...user,
+        status: isPaused ? 'online_idle' : 'away_break',
+        statusUpdatedAt: new Date().toISOString(),
+        currentActivity: isPaused ? user.currentActivity : undefined,
+      },
+    });
+    flashFeedback(isPaused ? 'Atendente retomado' : 'Atendente pausado');
+  }
+
+  function handleReassign() {
+    const target = users[reassignTarget];
+    if (!target || !user.currentActivity) return;
+    _update({
+      user: {
+        ...user,
+        status: 'online_idle',
+        statusUpdatedAt: new Date().toISOString(),
+        currentActivity: undefined,
+        metrics: user.metrics
+          ? { ...user.metrics, filaAtual: Math.max(0, user.metrics.filaAtual - 1) }
+          : undefined,
+      },
+    });
+    _update({
+      user: {
+        ...target,
+        status: 'busy_chat',
+        statusUpdatedAt: new Date().toISOString(),
+        currentActivity: user.currentActivity,
+      },
+    });
+    flashFeedback(`Atendimento transferido para ${target.nome.split(' ')[0]}`);
+    setReassignOpen(false);
+    setReassignTarget('');
+  }
+
+  const reassignCandidates = Object.values(users).filter(
+    (u) =>
+      u.userId !== user.userId &&
+      u.role === user.role &&
+      u.status !== 'offline' &&
+      u.status !== 'away_break',
+  );
+
+  return (
+    <div className="p-4 border-b border-slate-100">
+      <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-3">
+        Ações do supervisor
+      </div>
+
+      {feedback && (
+        <div className="mb-3 flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs">
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          {feedback}
+        </div>
+      )}
+
+      <div className="space-y-2">
+        {/* Sussurrar */}
+        {whisperOpen ? (
+          <div className="border border-slate-200 rounded-lg p-2 space-y-2 bg-slate-50">
+            <textarea
+              autoFocus
+              value={whisperText}
+              onChange={(e) => setWhisperText(e.target.value)}
+              rows={2}
+              placeholder={`Mensagem privada para ${user.nome.split(' ')[0]}…`}
+              className="w-full text-sm px-2 py-1.5 rounded-md border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 resize-none"
+            />
+            <div className="flex items-center justify-end gap-2">
+              <button
+                onClick={() => {
+                  setWhisperOpen(false);
+                  setWhisperText('');
+                }}
+                className="text-xs text-slate-500 hover:text-slate-700 px-2 py-1"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleWhisperSend}
+                disabled={!whisperText.trim()}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed px-3 py-1.5 rounded-md transition"
+              >
+                <Send className="h-3.5 w-3.5" />
+                Enviar
+              </button>
+            </div>
+          </div>
+        ) : (
+          <SupervisorActionButton
+            icon={<Send className="h-4 w-4" />}
+            label="Sussurrar"
+            hint="Mensagem privada"
+            onClick={() => setWhisperOpen(true)}
+            disabled={user.status === 'offline'}
+          />
+        )}
+
+        {/* Reatribuir */}
+        {reassignOpen ? (
+          <div className="border border-slate-200 rounded-lg p-2 space-y-2 bg-slate-50">
+            <div className="text-[11px] text-slate-500 px-1">
+              {user.currentActivity
+                ? `Transferir atendimento atual para:`
+                : 'Sem atendimento em curso.'}
+            </div>
+            {user.currentActivity && (
+              <>
+                <select
+                  autoFocus
+                  value={reassignTarget}
+                  onChange={(e) => setReassignTarget(e.target.value)}
+                  className="w-full text-sm px-2 py-1.5 rounded-md border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                >
+                  <option value="">Escolher destinatário…</option>
+                  {reassignCandidates.map((u) => (
+                    <option key={u.userId} value={u.userId}>
+                      {u.nome} · {u.metrics?.filaAtual ?? 0} na fila
+                    </option>
+                  ))}
+                </select>
+                <div className="flex items-center justify-end gap-2">
+                  <button
+                    onClick={() => {
+                      setReassignOpen(false);
+                      setReassignTarget('');
+                    }}
+                    className="text-xs text-slate-500 hover:text-slate-700 px-2 py-1"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleReassign}
+                    disabled={!reassignTarget}
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed px-3 py-1.5 rounded-md transition"
+                  >
+                    <UserCog className="h-3.5 w-3.5" />
+                    Transferir
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        ) : (
+          <SupervisorActionButton
+            icon={<UserCog className="h-4 w-4" />}
+            label="Reatribuir"
+            hint="Transferir atendimento"
+            onClick={() => setReassignOpen(true)}
+            disabled={!user.currentActivity}
+          />
+        )}
+
+        {/* Pausar / Retomar */}
+        <SupervisorActionButton
+          icon={isPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+          label={isPaused ? 'Retomar' : 'Pausar'}
+          hint={isPaused ? 'Voltar para disponível' : 'Sinalizar pausa'}
+          onClick={handlePauseToggle}
+          disabled={user.status === 'offline'}
+        />
+      </div>
+    </div>
+  );
+}
+
+function SupervisorActionButton({
+  icon,
+  label,
+  hint,
+  onClick,
+  disabled,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  hint: string;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm border border-slate-200 hover:border-slate-300 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white transition text-left"
+    >
+      <span className="text-slate-400">{icon}</span>
+      <span className="flex-1">
+        <span className="text-slate-700 font-medium">{label}</span>
+        <span className="block text-[10px] text-slate-400">{hint}</span>
+      </span>
+    </button>
   );
 }

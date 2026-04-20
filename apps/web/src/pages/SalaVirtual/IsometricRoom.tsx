@@ -28,6 +28,7 @@ interface Pod {
   colEnd: number;
   rowStart: number;
   rowEnd: number;
+  roles: Array<UserPresence["role"]>;
 }
 
 const PODS: Pod[] = [
@@ -39,6 +40,7 @@ const PODS: Pod[] = [
     colEnd: 4,
     rowStart: 0,
     rowEnd: 4,
+    roles: ["corretor"],
   },
   {
     id: "sac",
@@ -48,6 +50,7 @@ const PODS: Pod[] = [
     colEnd: 9,
     rowStart: 0,
     rowEnd: 4,
+    roles: ["sac"],
   },
   {
     id: "bots",
@@ -57,8 +60,18 @@ const PODS: Pod[] = [
     colEnd: 13,
     rowStart: 0,
     rowEnd: 4,
+    roles: ["bot"],
   },
 ];
+
+function countPod(users: UserPresence[], pod: Pod) {
+  const members = users.filter((u) => pod.roles.includes(u.role));
+  const online = members.filter((u) => u.status !== "offline").length;
+  const busy = members.filter(
+    (u) => u.status === "busy_chat" || u.status === "busy_call",
+  ).length;
+  return { total: members.length, online, busy };
+}
 
 function RoomFloor() {
   const tiles: JSX.Element[] = [];
@@ -85,7 +98,7 @@ function RoomFloor() {
   return <g className="room-floor">{tiles}</g>;
 }
 
-function RoomWalls() {
+function RoomWalls({ users }: { users: UserPresence[] }) {
   const walls: JSX.Element[] = [];
   const WALL_HEIGHT = 90;
 
@@ -120,30 +133,30 @@ function RoomWalls() {
 
     const midCol = (pod.colStart + pod.colEnd) / 2 - 0.5;
     const { px, py } = gridToIso(midCol, pod.rowStart);
+    const c = countPod(users, pod);
     walls.push(
       <g key={`sign-${pod.id}`}>
         <rect
-          x={px - 36}
+          x={px - 52}
           y={py - WALL_HEIGHT + 8}
-          width="72"
+          width="104"
           height="20"
           rx="4"
           fill={pod.accentColor}
           opacity="0.95"
         />
         <rect
-          x={px - 36}
+          x={px - 52}
           y={py - WALL_HEIGHT + 8}
-          width="72"
+          width="104"
           height="20"
           rx="4"
           fill="url(#wall-sign-gradient)"
           opacity="0.2"
         />
         <text
-          x={px}
+          x={px - 40}
           y={py - WALL_HEIGHT + 21}
-          textAnchor="middle"
           fontSize="10"
           fontWeight="700"
           fill="white"
@@ -151,6 +164,26 @@ function RoomWalls() {
           letterSpacing="0.5"
         >
           {pod.label.toUpperCase()}
+        </text>
+        <rect
+          x={px + 14}
+          y={py - WALL_HEIGHT + 11}
+          width="36"
+          height="14"
+          rx="3"
+          fill="white"
+          fillOpacity="0.25"
+        />
+        <text
+          x={px + 32}
+          y={py - WALL_HEIGHT + 21}
+          textAnchor="middle"
+          fontSize="9"
+          fontWeight="700"
+          fill="white"
+          fontFamily="Inter, system-ui, sans-serif"
+        >
+          {c.online}/{c.total}
         </text>
       </g>,
     );
@@ -270,7 +303,7 @@ export function IsometricRoom({
         className="room-bg"
       />
 
-      <RoomWalls />
+      <RoomWalls users={users} />
       <RoomFloor />
       <PodDividers />
       <RoomDecorations />
