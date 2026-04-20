@@ -1,0 +1,20 @@
+{
+  "name": "Aquapark CRM — Valparaíso",
+  "short_name": "AquaCRM",
+  "description": "CRM completo do Parque Aquático de Valparaíso",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b4a6f",
+  "theme_color": "#0b4a6f",
+  "orientation": "portrait-primary",
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "productivity"]
+}
