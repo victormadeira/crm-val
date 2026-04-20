@@ -42,6 +42,7 @@ import {
   Wallet,
   Workflow,
   Zap,
+  LayoutGrid,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Brand } from "@/components/Brand";
@@ -291,6 +292,12 @@ const NAV: { section: string; items: NavItem[] }[] = [
         icon: HardHat,
         roles: ["gestor", "supervisor", "admin"],
         badge: "3",
+      },
+      {
+        to: "/sala-virtual",
+        label: "Sala Virtual",
+        icon: LayoutGrid,
+        roles: ["gestor", "supervisor", "admin"],
       },
     ],
   },

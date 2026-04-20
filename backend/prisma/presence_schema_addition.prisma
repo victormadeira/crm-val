@@ -1,0 +1,36 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// Adição ao schema.prisma existente do CRM
+//
+// Cole estes modelos no seu schema.prisma principal.
+// Depois execute: npx prisma migrate dev --name add_presence_audit
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Log de auditoria de presença — persiste eventos para relatórios históricos.
+/// O estado em tempo real fica no Redis; este modelo é apenas para histórico.
+model PresenceAuditLog {
+  id          String   @id @default(cuid())
+  tenantId    String
+  userId      String
+  fromStatus  String   // PresenceStatus anterior
+  toStatus    String   // PresenceStatus novo
+  activityType String? // tipo da atividade (whatsapp, ticket, etc.)
+  targetId    String?  // ID do Lead/Ticket
+  durationSec Int?     // duração em segundos no status anterior
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId, userId])
+  @@index([tenantId, createdAt])
+  @@map("presence_audit_logs")
+}
+
+/// Configuração de sala por tenant — permite personalizar nome, layout etc.
+model PresenceRoomConfig {
+  id        String   @id @default(cuid())
+  tenantId  String   @unique
+  roomName  String   @default("Central de Atendimento")
+  gridCols  Int      @default(8)
+  gridRows  Int      @default(6)
+  updatedAt DateTime @updatedAt
+
+  @@map("presence_room_configs")
+}

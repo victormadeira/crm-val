@@ -47,6 +47,7 @@ import { Operacoes } from "@/pages/Operacoes";
 import { PipelineLive } from "@/pages/PipelineLive";
 import { DashboardLive } from "@/pages/DashboardLive";
 import { RevenueIntelligence } from "@/pages/RevenueIntelligence";
+import { SalaVirtual } from "@/pages/SalaVirtual";
 import { Placeholder } from "@/pages/Placeholder";
 
 function Protected({ children }: { children: React.ReactNode }) {
@@ -139,6 +140,7 @@ export default function App() {
           <Route path="/unidades" element={<Unidades />} />
           <Route path="/comunicacao" element={<Comunicacao />} />
           <Route path="/operacoes" element={<Operacoes />} />
+          <Route path="/sala-virtual" element={<SalaVirtual />} />
           <Route path="/meu-espaco" element={<MeuEspaco />} />
 
           <Route path="/admin" element={<Admin />} />
