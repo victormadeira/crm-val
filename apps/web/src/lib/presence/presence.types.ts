@@ -33,6 +33,7 @@ export interface UserPresence {
   statusUpdatedAt: string;
   currentActivity?: CurrentActivity;
   position: IsometricPosition;
+  photoUrl?: string;
   metrics?: {
     atendimentosHoje: number;
     tempoMedioResposta: number;

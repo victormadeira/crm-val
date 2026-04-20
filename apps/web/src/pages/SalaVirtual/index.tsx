@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { usePresenceStore } from "@/lib/presence/presenceStore";
 import { PresenceStatus, UserPresence } from "@/lib/presence/presence.types";
-import { IsometricRoom } from "./IsometricRoom";
+import { OfficeFloorplan } from "./OfficeFloorplan";
 import { AttendantPanel } from "./AttendantPanel";
 import { RoomStatusBar } from "./RoomStatusBar";
 
@@ -128,19 +128,10 @@ export function SalaVirtual() {
       />
 
       <div className="flex flex-1 overflow-hidden">
-        <div className="flex-1 overflow-hidden relative">
-          <div
-            className="absolute inset-0"
-            style={{
-              background:
-                "radial-gradient(ellipse 80% 60% at 50% 25%, #F0F9FF 0%, #E0F2FE 35%, #F8FAFC 75%, #F1F5F9 100%)",
-            }}
-          />
-
-          <div className="relative w-full h-full">
-            <IsometricRoom
+        <div className="flex-1 overflow-hidden relative bg-slate-100">
+          <div className="relative w-full h-full p-4">
+            <OfficeFloorplan
               users={allUsers}
-              roomConfig={roomConfig}
               selectedUserId={selectedUserId}
               onSelectUser={selectUser}
               filteredUserIds={filteredUserIds}
