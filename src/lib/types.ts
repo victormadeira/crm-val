@@ -961,6 +961,7 @@ export type LPElementoTipo =
   | "botao"
   | "forma_retangulo"
   | "forma_circulo"
+  | "forma_organica"
   | "icone"
   | "bg_animado";
 
@@ -1001,6 +1002,14 @@ export interface LPElemento {
   btnGradientPara?: string;
   /* Background animado (quando tipo === "bg_animado") */
   bgAnimId?: string;
+  /* Forma orgânica (quando tipo === "forma_organica") — id de ORGANIC_SHAPES */
+  shapeId?: string;
+  /* Stroke para formas SVG (organic + retângulo/círculo) */
+  strokeColor?: string;
+  strokeWidth?: number;
+  /* Flip horizontal/vertical — usado em formas orgânicas assimétricas */
+  flipH?: boolean;
+  flipV?: boolean;
   /* Tipografia avançada */
   fontFamily?: string;
   letterSpacing?: number;

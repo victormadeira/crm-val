@@ -75,14 +75,20 @@ import {
   BRAND_ASSET_CATEGORIAS,
   BTN_ICON_LABEL,
   FONT_FAMILIES,
+  ORGANIC_SHAPES,
+  ORGANIC_SHAPE_CATEGORIAS,
   ensureLandingFontsLoaded,
   getBgAnimation,
   getFontStack,
+  getOrganicShapeById,
+  getOrganicShapesByCategoria,
   resolveAcaoHref,
   type BgAnimationId,
   type BrandAsset,
   type BrandAssetCategoria,
   type BtnIconKey,
+  type OrganicShape,
+  type OrganicShapeCategoria,
 } from "@/lib/landingAssets";
 import {
   ArrowRight,
@@ -94,6 +100,17 @@ import {
   Play,
   ShoppingCart,
 } from "lucide-react";
+import {
+  addMedia,
+  deleteMedia,
+  isLibUrl,
+  libUrlFor,
+  libUrlId,
+  listMedia,
+  resolveMediaSrc,
+  type MediaAsset,
+  type MediaKind,
+} from "@/lib/mediaLibrary";
 
 /* ═══════════════════════════════════════════════════════════════════
    CANVAS
@@ -229,6 +246,8 @@ const elementoDefaults = (tipo: LPElementoTipo, x: number, y: number, z: number)
       return { ...base, w: 300, h: 200, bg: "#0B6BCB", radius: 16 };
     case "forma_circulo":
       return { ...base, w: 160, h: 160, bg: "#fbbf24", radius: 999 };
+    case "forma_organica":
+      return { ...base, w: 240, h: 240, bg: "#ff0030", shapeId: "blob_1" };
     case "icone":
       return { ...base, w: 48, h: 48, iconeNome: "star", color: "#0B6BCB" };
     case "bg_animado":
@@ -246,9 +265,11 @@ type Beneficio = { titulo: string; desc: string; icone: string };
 type Plano = { n: string; p: string; s: string };
 
 interface TemplateRecipe {
-  heroScene: string | null;
-  ctaFinalScene: string | null;
-  /** Gradient fallback quando heroScene for null (p.ex. minimal) */
+  /** URL de imagem da marca para o fundo do hero (null = gradient). */
+  heroImage: string | null;
+  /** URL de imagem da marca para o fundo do CTA final (null = gradient). */
+  ctaFinalImage: string | null;
+  /** Gradient fallback quando heroImage for null. */
   heroBgOverride?: string;
   /** Gradient principal usado em botões CTAs */
   btnGrad: { de: string; para: string };
@@ -287,8 +308,8 @@ interface TemplateRecipe {
 
 const TEMPLATE_RECIPES: Record<TemplateId, TemplateRecipe> = {
   passaporte_anual: {
-    heroScene: "family_sunshine",
-    ctaFinalScene: "ocean_waves",
+    heroImage: "/brand/valparaiso/lib/banner-passaportes.jpg",
+    ctaFinalImage: "/brand/valparaiso/lib/foto-07.webp",
     btnGrad: { de: "#ff0030", para: "#ff5e26" },
     heroOverlay: "linear-gradient(180deg,rgba(0,105,56,0.45) 0%,rgba(0,41,122,0.75) 100%)",
     badge: "PASSAPORTE ANUAL · TEMPORADA 2026",
@@ -319,8 +340,8 @@ const TEMPLATE_RECIPES: Record<TemplateId, TemplateRecipe> = {
     headlineLetter: -0.3,
   },
   passaporte_diario: {
-    heroScene: "splash_drops",
-    ctaFinalScene: "confetti_party",
+    heroImage: "/brand/valparaiso/lib/banner-atracoes.jpg",
+    ctaFinalImage: "/brand/valparaiso/lib/foto-03.webp",
     btnGrad: { de: "#ffcc01", para: "#ff5e26" },
     heroOverlay: "linear-gradient(180deg,rgba(0,105,56,0.35) 0%,rgba(0,105,56,0.7) 100%)",
     badge: "⚡ DAY-USE · INGRESSO DO DIA",
@@ -351,8 +372,8 @@ const TEMPLATE_RECIPES: Record<TemplateId, TemplateRecipe> = {
     headlineLetter: -0.5,
   },
   evento_corporativo: {
-    heroScene: "corp_night",
-    ctaFinalScene: "palm_breeze",
+    heroImage: "/brand/valparaiso/lib/banner-eventos.jpg",
+    ctaFinalImage: "/brand/valparaiso/lib/banner-sobre.jpg",
     btnGrad: { de: "#ffcc01", para: "#ff0030" },
     heroOverlay: "linear-gradient(180deg,rgba(0,41,122,0.55) 0%,rgba(0,0,0,0.85) 100%)",
     badge: "FAÇA SEU EVENTO · VALPARAÍSO CORPORATE",
@@ -383,8 +404,8 @@ const TEMPLATE_RECIPES: Record<TemplateId, TemplateRecipe> = {
     headlineLetter: -0.3,
   },
   festa_aniversario: {
-    heroScene: "confetti_party",
-    ctaFinalScene: "family_sunshine",
+    heroImage: "/brand/valparaiso/lib/banner-promocoes.jpg",
+    ctaFinalImage: "/brand/valparaiso/lib/foto-08.webp",
     btnGrad: { de: "#ff0030", para: "#ffcc01" },
     heroOverlay: "linear-gradient(180deg,rgba(0,105,56,0.35) 0%,rgba(255,0,48,0.55) 100%)",
     badge: "FESTA NO PARQUE · ANIVERSÁRIO",
@@ -414,8 +435,8 @@ const TEMPLATE_RECIPES: Record<TemplateId, TemplateRecipe> = {
     heroLight: true,
   },
   aventura_radical: {
-    heroScene: "deep_bubbles",
-    ctaFinalScene: "vip_gold",
+    heroImage: "/brand/valparaiso/lib/foto-05.webp",
+    ctaFinalImage: "/brand/valparaiso/lib/foto-10.webp",
     btnGrad: { de: "#ffcc01", para: "#ff0030" },
     heroOverlay: "linear-gradient(180deg,rgba(0,105,56,0.55) 0%,rgba(0,0,0,0.85) 100%)",
     badge: "AVENTURA RADICAL · TIROLESA & ARVORISMO",
@@ -446,8 +467,8 @@ const TEMPLATE_RECIPES: Record<TemplateId, TemplateRecipe> = {
     headlineLetter: -0.5,
   },
   promocoes: {
-    heroScene: "splash_drops",
-    ctaFinalScene: "confetti_party",
+    heroImage: "/brand/valparaiso/lib/banner-promocoes.jpg",
+    ctaFinalImage: "/brand/valparaiso/lib/foto-11.webp",
     btnGrad: { de: "#ffcc01", para: "#ff0030" },
     heroOverlay: "linear-gradient(180deg,rgba(0,0,0,0.55) 0%,rgba(255,0,48,0.75) 100%)",
     badge: "🔥 PROMOÇÃO RELÂMPAGO · TERMINA EM 48H",
@@ -479,8 +500,8 @@ const TEMPLATE_RECIPES: Record<TemplateId, TemplateRecipe> = {
     headlineLetter: -1,
   },
   valparaiso_park: {
-    heroScene: "palm_breeze",
-    ctaFinalScene: "family_sunshine",
+    heroImage: "/brand/valparaiso/lib/banner-sobre.jpg",
+    ctaFinalImage: "/brand/valparaiso/lib/foto-02.webp",
     btnGrad: { de: "#ff0030", para: "#ff5e26" },
     heroOverlay: "linear-gradient(180deg,rgba(0,105,56,0.55) 0%,rgba(0,41,122,0.75) 100%)",
     badge: "VALPARAÍSO ADVENTURE PARK · OFICIAL",
@@ -511,8 +532,8 @@ const TEMPLATE_RECIPES: Record<TemplateId, TemplateRecipe> = {
     headlineLetter: -0.5,
   },
   blank: {
-    heroScene: null,
-    ctaFinalScene: null,
+    heroImage: null,
+    ctaFinalImage: null,
     btnGrad: { de: "#0B6BCB", para: "#7c3aed" },
     heroOverlay: "",
     badge: "",
@@ -602,16 +623,17 @@ const buildTemplate = (t: TemplateId): { elementos: LPElemento[]; bg: string; h:
 
   // ─── HERO ─────────────────────────────────
   const HERO_H = 620;
-  if (recipe.heroScene) {
+  if (recipe.heroImage) {
     elementos.push({
       id: uid(),
-      tipo: "bg_animado",
+      tipo: "imagem",
       x: 0,
       y: 0,
       w: CANVAS_DESKTOP_W,
       h: HERO_H,
       z: z++,
-      bgAnimId: recipe.heroScene,
+      src: recipe.heroImage,
+      fit: "cover",
       radius: 0,
     });
   } else {
@@ -1027,16 +1049,17 @@ const buildTemplate = (t: TemplateId): { elementos: LPElemento[]; bg: string; h:
   // ─── CTA FINAL ─────────────────────────────────
   const sec5Y = sec4Y + 460;
   const CTA_H = 360;
-  if (recipe.ctaFinalScene) {
+  if (recipe.ctaFinalImage) {
     elementos.push({
       id: uid(),
-      tipo: "bg_animado",
+      tipo: "imagem",
       x: 0,
       y: sec5Y,
       w: CANVAS_DESKTOP_W,
       h: CTA_H,
       z: z++,
-      bgAnimId: recipe.ctaFinalScene,
+      src: recipe.ctaFinalImage,
+      fit: "cover",
       radius: 0,
     });
     elementos.push({
@@ -1197,71 +1220,69 @@ const PALETTE: PaletteGroup[] = [
     ],
   },
   {
-    label: "Cenas animadas",
-    itens: [
-      {
-        tipo: "bg_animado",
-        label: "Oceano",
-        icon: Waves,
-        preset: { bgAnimId: "ocean_waves", w: 560, h: 320, radius: 16 },
-      },
-      {
-        tipo: "bg_animado",
-        label: "Pôr-do-sol",
-        icon: Sparkles,
-        preset: { bgAnimId: "tropical_sunset", w: 560, h: 320, radius: 16 },
-      },
-      {
-        tipo: "bg_animado",
-        label: "Bolhas",
-        icon: Circle,
-        preset: { bgAnimId: "deep_bubbles", w: 420, h: 420, radius: 999 },
-      },
-      {
-        tipo: "bg_animado",
-        label: "Aurora",
-        icon: Sparkles,
-        preset: { bgAnimId: "aurora_aqua", w: 560, h: 320, radius: 16 },
-      },
-      {
-        tipo: "bg_animado",
-        label: "Palmeiras",
-        icon: Waves,
-        preset: { bgAnimId: "palm_breeze", w: 560, h: 320, radius: 16 },
-      },
-      {
-        tipo: "bg_animado",
-        label: "Gotas",
-        icon: Waves,
-        preset: { bgAnimId: "splash_drops", w: 420, h: 420, radius: 16 },
-      },
-      {
-        tipo: "bg_animado",
-        label: "VIP Gold",
-        icon: Sparkles,
-        preset: { bgAnimId: "vip_gold", w: 560, h: 320, radius: 16 },
-      },
-      {
-        tipo: "bg_animado",
-        label: "Noturno",
-        icon: Sparkles,
-        preset: { bgAnimId: "corp_night", w: 560, h: 320, radius: 16 },
-      },
-      {
-        tipo: "bg_animado",
-        label: "Confete",
-        icon: Sparkles,
-        preset: { bgAnimId: "confetti_party", w: 420, h: 420, radius: 16 },
-      },
-      {
-        tipo: "bg_animado",
-        label: "Sol família",
-        icon: Sparkles,
-        preset: { bgAnimId: "family_sunshine", w: 420, h: 420, radius: 999 },
-      },
-    ],
+    label: "Formas orgânicas",
+    itens: ORGANIC_SHAPES.map((s) => ({
+      tipo: "forma_organica" as LPElementoTipo,
+      label: s.label,
+      icon: Shapes,
+      preset: { shapeId: s.id },
+    })),
   },
 ];
+
+/* ═══════════════════════════════════════════════════════════════════
+   HELPERS — resolve "lib://" URLs para Blob URLs do IndexedDB
+   ═══════════════════════════════════════════════════════════════════ */
+
+function useResolvedMediaSrc(src: string | undefined): string | undefined {
+  const [resolved, setResolved] = useState<string | undefined>(() =>
+    src && isLibUrl(src) ? undefined : src
+  );
+  useEffect(() => {
+    let alive = true;
+    if (!src) { setResolved(undefined); return; }
+    if (!isLibUrl(src)) { setResolved(src); return; }
+    resolveMediaSrc(src).then((u) => { if (alive) setResolved(u); });
+    return () => { alive = false; };
+  }, [src]);
+  return resolved;
+}
+
+function LibImg({ src, style }: { src: string; style?: React.CSSProperties }) {
+  const resolved = useResolvedMediaSrc(src);
+  if (!resolved) {
+    return (
+      <div
+        style={{ ...style, background: "#f1f5f9" }}
+        className="flex items-center justify-center text-slate-400"
+      >
+        <ImageIcon className="h-5 w-5" />
+      </div>
+    );
+  }
+  return <img src={resolved} alt="" draggable={false} style={style} />;
+}
+
+function LibVideo({
+  src,
+  style,
+}: {
+  src: string;
+  style?: React.CSSProperties;
+}) {
+  const resolved = useResolvedMediaSrc(src);
+  if (!resolved) {
+    return (
+      <div
+        style={{ ...style, background: "#0f172a" }}
+        className="flex items-center justify-center text-white/70"
+      >
+        <Film className="h-5 w-5" />
+      </div>
+    );
+  }
+  return <video src={resolved} controls style={style} />;
+}
 
 /* ═══════════════════════════════════════════════════════════════════
    PÁGINA PRINCIPAL
@@ -1622,6 +1643,15 @@ function CanvasEditor({
   const [rightTab, setRightTab] = useState<"props" | "layers">("props");
   const [brandCat, setBrandCat] = useState<BrandAssetCategoria>("logo");
   const [guides, setGuides] = useState<{ v: number[]; h: number[] }>({ v: [], h: [] });
+  const [mediaRefresh, setMediaRefresh] = useState(0);
+  const [mediaAssets, setMediaAssets] = useState<MediaAsset[]>([]);
+  const [mediaFilter, setMediaFilter] = useState<MediaKind | "all">("all");
+
+  useEffect(() => {
+    let alive = true;
+    listMedia().then((a) => { if (alive) setMediaAssets(a); });
+    return () => { alive = false; };
+  }, [mediaRefresh]);
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const canvasW = device === "desktop" ? CANVAS_DESKTOP_W : CANVAS_MOBILE_W;
@@ -1966,7 +1996,13 @@ function CanvasEditor({
     inp.onchange = async () => {
       const f = inp.files?.[0];
       if (!f) return;
-      cb(await fileToDataUrl(f));
+      try {
+        const asset = await addMedia(f);
+        setMediaRefresh((n) => n + 1);
+        cb(libUrlFor(asset.id));
+      } catch {
+        cb(await fileToDataUrl(f));
+      }
     };
     inp.click();
   };
@@ -1980,7 +2016,13 @@ function CanvasEditor({
     inp.onchange = async () => {
       const f = inp.files?.[0];
       if (!f) return;
-      cb(await fileToDataUrl(f));
+      try {
+        const asset = await addMedia(f);
+        setMediaRefresh((n) => n + 1);
+        cb(libUrlFor(asset.id));
+      } catch {
+        cb(await fileToDataUrl(f));
+      }
     };
     inp.click();
   };
@@ -2211,6 +2253,110 @@ function CanvasEditor({
                 </button>
               ))}
             </div>
+          </div>
+
+          <div className="px-3 py-3 border-b border-slate-100">
+            <div className="text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-2 inline-flex items-center gap-1.5">
+              <ImageIcon className="h-3 w-3 text-brand-500" />
+              Biblioteca · meus uploads
+            </div>
+            <div className="flex items-center gap-1 mb-2">
+              {(["all", "image", "video"] as const).map((k) => (
+                <button
+                  key={k}
+                  onClick={() => setMediaFilter(k)}
+                  className={cn(
+                    "px-2 h-6 rounded-[6px] text-[10px] font-semibold transition border",
+                    mediaFilter === k
+                      ? "bg-brand-50 border-brand-400 text-brand-700"
+                      : "border-slate-200 text-slate-500 hover:border-brand-300"
+                  )}
+                >
+                  {k === "all" ? "Tudo" : k === "image" ? "Imagens" : "Vídeos"}
+                </button>
+              ))}
+              <button
+                onClick={() => {
+                  const inp = document.createElement("input");
+                  inp.type = "file";
+                  inp.accept = "image/*,video/*";
+                  inp.multiple = true;
+                  inp.onchange = async () => {
+                    const files = Array.from(inp.files ?? []);
+                    for (const f of files) {
+                      try { await addMedia(f); } catch { /* ignora */ }
+                    }
+                    setMediaRefresh((n) => n + 1);
+                  };
+                  inp.click();
+                }}
+                className="ml-auto px-2 h-6 rounded-[6px] text-[10px] font-semibold border border-dashed border-slate-300 text-slate-600 hover:border-brand-400 hover:text-brand-700"
+              >
+                + Upload
+              </button>
+            </div>
+            {mediaAssets.length === 0 ? (
+              <div className="rounded-[8px] border border-dashed border-slate-300 px-2 py-3 text-center text-[10px] text-slate-500">
+                Sem arquivos ainda. Clique em “+ Upload” para adicionar imagens ou vídeos.
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-1.5">
+                {mediaAssets
+                  .filter((a) => mediaFilter === "all" || a.kind === mediaFilter)
+                  .map((a) => {
+                    const isVideo = a.kind === "video";
+                    const ratio = a.width && a.height ? a.width / a.height : 1;
+                    return (
+                      <div key={a.id} className="group relative aspect-square rounded-[8px] border border-slate-200 bg-slate-50 overflow-hidden hover:border-brand-400 transition">
+                        <button
+                          draggable
+                          onDragStart={(e) => {
+                            const tipo: LPElementoTipo = isVideo ? "video" : "imagem";
+                            const w = 360;
+                            const h = Math.max(60, Math.round(w / (ratio || 1)));
+                            setDrag({
+                              kind: "palette",
+                              tipo,
+                              preset: { src: libUrlFor(a.id), w, h, fit: "cover", radius: 0 },
+                            });
+                            e.dataTransfer.effectAllowed = "copy";
+                            e.dataTransfer.setData("text/plain", tipo);
+                          }}
+                          onDragEnd={() => setDrag(null)}
+                          onClick={() => {
+                            const tipo: LPElementoTipo = isVideo ? "video" : "imagem";
+                            const w = 360;
+                            const h = Math.max(60, Math.round(w / (ratio || 1)));
+                            addEl(tipo, { src: libUrlFor(a.id), w, h, fit: "cover", radius: 0 }, canvasW / 2 - w / 2, 80);
+                          }}
+                          className="absolute inset-0 w-full h-full cursor-grab active:cursor-grabbing"
+                          title={a.name}
+                          aria-label={`Inserir ${a.name}`}
+                        >
+                          <LibImg src={libUrlFor(a.id)} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          {isVideo && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                              <Play className="h-4 w-4 text-white drop-shadow" />
+                            </div>
+                          )}
+                        </button>
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            await deleteMedia(a.id);
+                            setMediaRefresh((n) => n + 1);
+                          }}
+                          className="absolute top-0.5 right-0.5 h-5 w-5 rounded-[4px] bg-white/90 text-slate-500 hover:text-rose-600 opacity-0 group-hover:opacity-100 transition inline-flex items-center justify-center text-[10px]"
+                          title="Remover da biblioteca"
+                          aria-label="Remover"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
           </div>
 
           <div className="px-3 py-3 mt-auto border-t border-slate-100 bg-slate-50/40">
@@ -2635,10 +2781,8 @@ function InnerElement({
   }
   if (el.tipo === "imagem") {
     return el.src ? (
-      <img
+      <LibImg
         src={el.src}
-        alt=""
-        draggable={false}
         style={{
           ...box,
           objectFit: el.fit ?? "cover",
@@ -2657,9 +2801,8 @@ function InnerElement({
   }
   if (el.tipo === "video") {
     return el.src ? (
-      <video
+      <LibVideo
         src={el.src}
-        controls
         style={{ ...box, objectFit: el.fit ?? "cover", display: "block" }}
       />
     ) : (
@@ -2800,8 +2943,36 @@ function InnerElement({
           ...box,
           background: el.bg ?? "#0B6BCB",
           borderRadius: el.tipo === "forma_circulo" ? 9999 : el.radius ?? 0,
+          border:
+            el.strokeWidth && el.strokeWidth > 0
+              ? `${el.strokeWidth}px solid ${el.strokeColor ?? "#0f172a"}`
+              : undefined,
         }}
       />
+    );
+  }
+  if (el.tipo === "forma_organica") {
+    const shape = getOrganicShapeById(el.shapeId ?? "blob_1");
+    if (!shape) return <div style={box} />;
+    const flipTransform = `scale(${el.flipH ? -1 : 1}, ${el.flipV ? -1 : 1})`;
+    return (
+      <div style={{ ...box, overflow: "visible" }}>
+        <svg
+          viewBox={shape.viewBox}
+          width="100%"
+          height="100%"
+          preserveAspectRatio="none"
+          style={{ display: "block", transform: flipTransform }}
+        >
+          <path
+            d={shape.path}
+            fill={el.bg ?? "#ff0030"}
+            stroke={el.strokeColor}
+            strokeWidth={el.strokeWidth ?? 0}
+            opacity={el.opacity ?? 1}
+          />
+        </svg>
+      </div>
     );
   }
   if (el.tipo === "icone") {
@@ -3883,13 +4054,39 @@ function Inspector({
       {/* Cena animada — picker */}
       {el.tipo === "bg_animado" && <BgAnimInspectorSection el={el} onCommit={onCommit} />}
 
+      {/* Forma orgânica — picker + flip */}
+      {el.tipo === "forma_organica" && (
+        <OrganicShapeInspectorSection el={el} onCommit={onCommit} />
+      )}
+
       {/* Cores */}
       <Section title="Cores & estilo">
         {(el.tipo === "texto" || el.tipo === "botao" || el.tipo === "icone") && (
           <ColorField label="Cor do texto" value={el.color ?? "#0f172a"} onChange={(v) => onCommit({ color: v })} />
         )}
-        {(el.tipo === "botao" || el.tipo === "forma_retangulo" || el.tipo === "forma_circulo") && (
+        {(el.tipo === "botao" ||
+          el.tipo === "forma_retangulo" ||
+          el.tipo === "forma_circulo" ||
+          el.tipo === "forma_organica") && (
           <ColorField label="Fundo" value={el.bg ?? "#0B6BCB"} onChange={(v) => onCommit({ bg: v })} />
+        )}
+        {(el.tipo === "forma_retangulo" ||
+          el.tipo === "forma_circulo" ||
+          el.tipo === "forma_organica") && (
+          <>
+            <ColorField
+              label="Contorno"
+              value={el.strokeColor ?? "#0f172a"}
+              onChange={(v) => onCommit({ strokeColor: v })}
+            />
+            <NumberField
+              label="Espessura do contorno"
+              value={el.strokeWidth ?? 0}
+              min={0}
+              max={20}
+              onChange={(v) => onCommit({ strokeWidth: v })}
+            />
+          </>
         )}
         {(el.tipo === "imagem" ||
           el.tipo === "video" ||
@@ -4006,6 +4203,94 @@ function BgAnimInspectorSection({
           className="h-8 rounded-[8px] border border-slate-200 text-[10.5px] font-semibold hover:border-brand-300"
         >
           Círculo / pílula
+        </button>
+      </div>
+    </Section>
+  );
+}
+
+function OrganicShapeInspectorSection({
+  el,
+  onCommit,
+}: {
+  el: LPElemento;
+  onCommit: (patch: Partial<LPElemento>) => void;
+}) {
+  const atualId = el.shapeId ?? "blob_1";
+  const [cat, setCat] = useState<OrganicShapeCategoria>(
+    () => getOrganicShapeById(atualId)?.categoria ?? "blob"
+  );
+  const shapes = getOrganicShapesByCategoria(cat);
+  return (
+    <Section title="Forma orgânica">
+      <div className="text-[10px] text-slate-500 mb-2">
+        Escolha a forma e customize cores, contorno e orientação.
+      </div>
+      <div className="flex flex-wrap gap-1 mb-2">
+        {ORGANIC_SHAPE_CATEGORIAS.map((c) => (
+          <button
+            key={c.cat}
+            onClick={() => setCat(c.cat)}
+            className={cn(
+              "h-6 px-2 rounded-[6px] text-[10px] font-semibold border transition",
+              cat === c.cat
+                ? "bg-brand-50 border-brand-400 text-brand-700"
+                : "border-slate-200 text-slate-500 hover:border-brand-300"
+            )}
+          >
+            {c.label}
+          </button>
+        ))}
+      </div>
+      <div className="grid grid-cols-4 gap-1.5">
+        {shapes.map((s) => {
+          const ativo = atualId === s.id;
+          return (
+            <button
+              key={s.id}
+              onClick={() => onCommit({ shapeId: s.id })}
+              title={s.label}
+              className={cn(
+                "h-14 rounded-[8px] border inline-flex items-center justify-center transition bg-white",
+                ativo
+                  ? "ring-2 ring-brand-500 border-brand-500"
+                  : "border-slate-200 hover:border-brand-300"
+              )}
+            >
+              <svg
+                viewBox={s.viewBox}
+                width="70%"
+                height="70%"
+                preserveAspectRatio="xMidYMid meet"
+              >
+                <path d={s.path} fill={el.bg ?? "#ff0030"} />
+              </svg>
+            </button>
+          );
+        })}
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-1.5">
+        <button
+          onClick={() => onCommit({ flipH: !el.flipH })}
+          className={cn(
+            "h-8 rounded-[8px] border text-[10.5px] font-semibold transition",
+            el.flipH
+              ? "bg-brand-50 border-brand-400 text-brand-700"
+              : "border-slate-200 hover:border-brand-300"
+          )}
+        >
+          Espelhar ↔
+        </button>
+        <button
+          onClick={() => onCommit({ flipV: !el.flipV })}
+          className={cn(
+            "h-8 rounded-[8px] border text-[10.5px] font-semibold transition",
+            el.flipV
+              ? "bg-brand-50 border-brand-400 text-brand-700"
+              : "border-slate-200 hover:border-brand-300"
+          )}
+        >
+          Inverter ↕
         </button>
       </div>
     </Section>
@@ -4686,6 +4971,7 @@ function labelTipo(tipo: LPElementoTipo): string {
     botao: "Botão",
     forma_retangulo: "Retângulo",
     forma_circulo: "Círculo",
+    forma_organica: "Forma orgânica",
     icone: "Ícone",
     bg_animado: "Cena animada",
   }[tipo];
@@ -4706,6 +4992,7 @@ function iconForTipo(tipo: LPElementoTipo): React.ComponentType<{ className?: st
     botao: MousePointer2,
     forma_retangulo: Square,
     forma_circulo: Circle,
+    forma_organica: Shapes,
     icone: Star,
     bg_animado: Sparkles,
   }[tipo];

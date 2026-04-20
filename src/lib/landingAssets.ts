@@ -645,6 +645,267 @@ export const BRAND_ASSET_CATEGORIAS: {
   { cat: "foto", label: "Fotos" },
 ];
 
+/* ------------------------------------------------------------------ */
+/* FORMAS ORGÂNICAS — catálogo de shapes SVG estilo Canva              */
+/* ------------------------------------------------------------------ */
+
+export type OrganicShapeCategoria =
+  | "blob"
+  | "onda"
+  | "folha"
+  | "estrela"
+  | "explosao"
+  | "fita"
+  | "balao"
+  | "seta";
+
+export interface OrganicShape {
+  id: string;
+  label: string;
+  categoria: OrganicShapeCategoria;
+  /** viewBox do SVG — formas são normalizadas para caber num retângulo */
+  viewBox: string;
+  /** path data (d=) da forma */
+  path: string;
+  /** aspect ratio sugerido (w/h) — usado para definir tamanho inicial */
+  ratio: number;
+  /** tags para busca */
+  tags?: string[];
+}
+
+export const ORGANIC_SHAPES: OrganicShape[] = [
+  // BLOBS orgânicos (manchas assimétricas) — viewBox centrado em 0,0
+  {
+    id: "blob_1",
+    label: "Blob suave",
+    categoria: "blob",
+    viewBox: "-90 -90 180 180",
+    path: "M43,-61C56,-53,67,-41,73,-27C78,-13,77,3,71,16C65,29,53,38,41,47C29,56,15,66,-1,68C-17,70,-34,64,-47,54C-60,43,-69,27,-71,10C-72,-7,-67,-26,-57,-40C-46,-54,-30,-63,-13,-67C4,-70,23,-69,43,-61Z",
+    ratio: 1,
+    tags: ["blob", "organico", "mancha"],
+  },
+  {
+    id: "blob_2",
+    label: "Blob angular",
+    categoria: "blob",
+    viewBox: "-80 -80 160 160",
+    path: "M50,-53C64,-42,74,-25,75,-7C76,10,68,28,55,42C42,56,24,66,4,63C-16,61,-37,46,-51,28C-64,10,-70,-11,-63,-28C-56,-44,-37,-56,-18,-62C1,-69,19,-69,36,-66Z",
+    ratio: 1,
+    tags: ["blob", "organico"],
+  },
+  {
+    id: "blob_3",
+    label: "Blob alongado",
+    categoria: "blob",
+    viewBox: "-90 -90 180 180",
+    path: "M62,-52C75,-35,75,-8,67,11C58,30,42,42,22,52C3,61,-20,68,-38,60C-56,52,-70,28,-71,4C-72,-20,-60,-44,-43,-60C-26,-77,-3,-87,16,-81C36,-74,49,-69,62,-52Z",
+    ratio: 1,
+    tags: ["blob"],
+  },
+  // ONDAS
+  {
+    id: "onda_1",
+    label: "Onda suave",
+    categoria: "onda",
+    viewBox: "0 0 400 80",
+    path: "M0,40 C50,10 100,70 150,40 C200,10 250,70 300,40 C350,10 400,70 400,40 L400,80 L0,80 Z",
+    ratio: 5,
+    tags: ["onda", "divisor", "agua"],
+  },
+  {
+    id: "onda_2",
+    label: "Onda dupla",
+    categoria: "onda",
+    viewBox: "0 0 400 100",
+    path: "M0,50 C80,0 160,100 240,50 C320,0 400,100 400,50 L400,100 L0,100 Z",
+    ratio: 4,
+    tags: ["onda", "divisor"],
+  },
+  {
+    id: "onda_3",
+    label: "Onda picos",
+    categoria: "onda",
+    viewBox: "0 0 400 80",
+    path: "M0,80 Q50,0 100,40 T200,40 T300,40 T400,40 L400,80 Z",
+    ratio: 5,
+    tags: ["onda", "picos"],
+  },
+  // FOLHAS
+  {
+    id: "folha_1",
+    label: "Folha simples",
+    categoria: "folha",
+    viewBox: "0 0 100 160",
+    path: "M50,10 C80,40 90,90 50,150 C10,90 20,40 50,10 Z",
+    ratio: 100 / 160,
+    tags: ["folha", "natureza"],
+  },
+  {
+    id: "folha_2",
+    label: "Folha tropical",
+    categoria: "folha",
+    viewBox: "0 0 120 200",
+    path: "M60,5 C95,35 110,100 90,180 Q60,195 30,180 C10,100 25,35 60,5 Z M60,20 L60,180",
+    ratio: 120 / 200,
+    tags: ["folha", "tropical"],
+  },
+  {
+    id: "gota",
+    label: "Gota d'água",
+    categoria: "folha",
+    viewBox: "0 0 100 140",
+    path: "M50,5 C50,5 15,60 15,90 A35,35 0 0,0 85,90 C85,60 50,5 50,5 Z",
+    ratio: 100 / 140,
+    tags: ["gota", "agua"],
+  },
+  // ESTRELAS
+  {
+    id: "estrela_5",
+    label: "Estrela 5 pontas",
+    categoria: "estrela",
+    viewBox: "0 0 100 100",
+    path: "M50,5 L61,38 L96,38 L68,58 L79,92 L50,72 L21,92 L32,58 L4,38 L39,38 Z",
+    ratio: 1,
+    tags: ["estrela", "star"],
+  },
+  {
+    id: "estrela_6",
+    label: "Estrela 6 pontas",
+    categoria: "estrela",
+    viewBox: "0 0 100 100",
+    path: "M50,5 L60,30 L90,30 L68,48 L78,78 L50,62 L22,78 L32,48 L10,30 L40,30 Z",
+    ratio: 1,
+    tags: ["estrela"],
+  },
+  {
+    id: "estrela_suave",
+    label: "Estrela arredondada",
+    categoria: "estrela",
+    viewBox: "0 0 100 100",
+    path: "M50,10 Q56,38 85,42 Q62,58 68,88 Q50,72 32,88 Q38,58 15,42 Q44,38 50,10 Z",
+    ratio: 1,
+    tags: ["estrela", "suave"],
+  },
+  // EXPLOSÕES / BURSTS
+  {
+    id: "explosao_12",
+    label: "Burst 12 pontas",
+    categoria: "explosao",
+    viewBox: "0 0 100 100",
+    path: "M50,2 L55,22 L70,8 L65,28 L85,18 L75,36 L96,40 L78,48 L96,60 L75,64 L85,82 L65,72 L70,92 L55,78 L50,98 L45,78 L30,92 L35,72 L15,82 L25,64 L4,60 L22,48 L4,40 L25,36 L15,18 L35,28 L30,8 L45,22 Z",
+    ratio: 1,
+    tags: ["burst", "explosao", "destaque"],
+  },
+  {
+    id: "explosao_sol",
+    label: "Sol radiante",
+    categoria: "explosao",
+    viewBox: "0 0 100 100",
+    path: "M50,20 A30,30 0 1,1 49.99,20 Z M50,0 L52,12 L48,12 Z M50,100 L48,88 L52,88 Z M0,50 L12,48 L12,52 Z M100,50 L88,52 L88,48 Z M15,15 L25,22 L22,25 Z M85,85 L75,78 L78,75 Z M85,15 L78,22 L75,25 Z M15,85 L22,78 L25,75 Z",
+    ratio: 1,
+    tags: ["sol", "raios"],
+  },
+  // FITAS / BANNERS
+  {
+    id: "fita_1",
+    label: "Fita reta",
+    categoria: "fita",
+    viewBox: "0 0 300 80",
+    path: "M20,20 L280,20 L300,40 L280,60 L20,60 L0,40 Z",
+    ratio: 300 / 80,
+    tags: ["fita", "banner", "destaque"],
+  },
+  {
+    id: "fita_2",
+    label: "Fita ondulada",
+    categoria: "fita",
+    viewBox: "0 0 300 100",
+    path: "M0,30 Q75,10 150,30 T300,30 L300,70 Q225,90 150,70 T0,70 Z",
+    ratio: 3,
+    tags: ["fita", "ondulada"],
+  },
+  // BALÕES DE FALA
+  {
+    id: "balao_fala",
+    label: "Balão de fala",
+    categoria: "balao",
+    viewBox: "0 0 200 160",
+    path: "M20,10 L180,10 Q195,10 195,25 L195,115 Q195,130 180,130 L70,130 L40,155 L50,130 L20,130 Q5,130 5,115 L5,25 Q5,10 20,10 Z",
+    ratio: 200 / 160,
+    tags: ["balao", "fala", "chat"],
+  },
+  {
+    id: "balao_pensamento",
+    label: "Balão pensamento",
+    categoria: "balao",
+    viewBox: "0 0 200 160",
+    path: "M100,15 C160,15 185,45 185,75 C185,105 160,130 100,130 C70,130 45,120 30,100 C20,110 10,110 5,100 C15,95 15,85 10,75 C10,45 40,15 100,15 Z",
+    ratio: 200 / 160,
+    tags: ["balao", "pensamento"],
+  },
+  // SETAS
+  {
+    id: "seta_reta",
+    label: "Seta reta",
+    categoria: "seta",
+    viewBox: "0 0 200 80",
+    path: "M0,30 L130,30 L130,10 L200,40 L130,70 L130,50 L0,50 Z",
+    ratio: 200 / 80,
+    tags: ["seta", "arrow"],
+  },
+  {
+    id: "seta_curva",
+    label: "Seta curva",
+    categoria: "seta",
+    viewBox: "0 0 200 140",
+    path: "M20,120 Q20,30 120,30 L120,10 L190,45 L120,80 L120,60 Q60,60 60,120 Z",
+    ratio: 200 / 140,
+    tags: ["seta", "curva"],
+  },
+  {
+    id: "raio",
+    label: "Raio",
+    categoria: "explosao",
+    viewBox: "0 0 100 160",
+    path: "M60,5 L20,85 L50,85 L35,155 L80,65 L50,65 Z",
+    ratio: 100 / 160,
+    tags: ["raio", "energia"],
+  },
+  {
+    id: "coracao",
+    label: "Coração",
+    categoria: "folha",
+    viewBox: "0 0 100 90",
+    path: "M50,85 C50,85 10,55 10,30 C10,15 22,5 35,5 C42,5 48,10 50,18 C52,10 58,5 65,5 C78,5 90,15 90,30 C90,55 50,85 50,85 Z",
+    ratio: 100 / 90,
+    tags: ["coracao", "amor"],
+  },
+];
+
+export const ORGANIC_SHAPE_CATEGORIAS: {
+  cat: OrganicShapeCategoria;
+  label: string;
+}[] = [
+  { cat: "blob", label: "Blobs" },
+  { cat: "onda", label: "Ondas" },
+  { cat: "folha", label: "Folhas" },
+  { cat: "estrela", label: "Estrelas" },
+  { cat: "explosao", label: "Bursts" },
+  { cat: "fita", label: "Fitas" },
+  { cat: "balao", label: "Balões" },
+  { cat: "seta", label: "Setas" },
+];
+
+export function getOrganicShapeById(id: string): OrganicShape | undefined {
+  return ORGANIC_SHAPES.find((s) => s.id === id);
+}
+
+export function getOrganicShapesByCategoria(
+  cat: OrganicShapeCategoria
+): OrganicShape[] {
+  return ORGANIC_SHAPES.filter((s) => s.categoria === cat);
+}
+
 export function resolveAcaoHref(acao?: BtnAcao): string | undefined {
   if (!acao || !acao.valor) return undefined;
   switch (acao.tipo) {
